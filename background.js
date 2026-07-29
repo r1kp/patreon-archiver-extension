@@ -6,6 +6,12 @@ import {
   deleteCreator,
   getSettings,
 } from "./lib/db.js";
+import { installConsoleCapture, logEvent, logMilestone } from "./lib/appLog.js";
+
+// Ab hier landen console.warn/console.error dieses Workers zusaetzlich im
+// persistenten Log (IndexedDB-Ringpuffer + Bridge-Tagesdatei). Die Ausgabe in
+// den DevTools bleibt unveraendert erhalten.
+installConsoleCapture("background");
 
 // Downloads (inkl. ZIP-Erstellung und Dateisystemzugriff) laufen direkt im
 // Dashboard-Tab (siehe dashboard/dashboard.js + lib/downloader.js), nicht
@@ -80,7 +86,6 @@ async function downloadOneDriveFileViaHiddenWindow(shareUrl, onProgress) {
     windowId = win.id;
     tabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
     if (tabId == null) throw new Error("Could not determine tab id of hidden OneDrive window");
-    console.log("[PA Background] OneDrive: opened minimized window", windowId, "(tab", tabId, ") for", shareUrl);
 
     await new Promise((resolve) => {
       function onUpdated(id, info) {
@@ -98,7 +103,6 @@ async function downloadOneDriveFileViaHiddenWindow(shareUrl, onProgress) {
         }
       }).catch(() => {});
     });
-    console.log("[PA Background] OneDrive: window", windowId, "finished loading, looking for download button");
 
     let capturedDownloadId = null;
     const downloadStartedPromise = new Promise((resolve) => {
@@ -161,7 +165,6 @@ async function downloadOneDriveFileViaHiddenWindow(shareUrl, onProgress) {
       cleanup();
       return { ok: false, error: "OneDrive download button not found (link may require login, be a folder, or downloads may be disabled by the owner)" };
     }
-    console.log("[PA Background] OneDrive: clicked download button in window", windowId, "- waiting for download to start");
 
     const startTimeout = new Promise((resolve) => setTimeout(() => resolve(null), 15000));
     const startedItem = await Promise.race([downloadStartedPromise, startTimeout]);
@@ -171,7 +174,6 @@ async function downloadOneDriveFileViaHiddenWindow(shareUrl, onProgress) {
       cleanup();
       return { ok: false, error: "OneDrive download did not start within 15s" };
     }
-    console.log("[PA Background] OneDrive: download", capturedDownloadId, "started (real filename:", suggestedRealFilename, ") - waiting for completion");
 
     // WICHTIG: das Fenster HIER noch NICHT schliessen, obwohl der Download
     // schon "gestartet" ist. Live beobachtet: schliesst man es zu diesem
@@ -234,7 +236,6 @@ async function downloadOneDriveFileViaHiddenWindow(shareUrl, onProgress) {
       return { ok: false, error: `OneDrive download did not complete (state: ${completedItem?.state || "unknown"}${completedItem?.error ? ", " + completedItem.error : ""})` };
     }
 
-    console.log("[PA Background] OneDrive: download complete, local temp path:", completedItem.filename, "size:", completedItem.fileSize);
     return {
       ok: true,
       localPath: completedItem.filename,
@@ -254,7 +255,6 @@ async function resolveMediafireViaHiddenTab(shareUrl) {
   try {
     const tab = await chrome.tabs.create({ url: shareUrl, active: false });
     tabId = tab.id;
-    console.log("[PA Background] MediaFire: opened hidden tab", tabId, "for", shareUrl);
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 400));
       const results = await chrome.scripting.executeScript({
@@ -279,7 +279,6 @@ async function resolveMediafireViaHiddenTab(shareUrl) {
         },
       });
       if (results && results[0] && results[0].result && results[0].result.directUrl) {
-        console.log("[PA Background] MediaFire: hidden tab found link:", results[0].result);
         chrome.tabs.remove(tabId).catch(() => {});
         return { ok: true, directUrl: results[0].result.directUrl, filename: results[0].result.filename };
       }
@@ -300,7 +299,6 @@ async function resolveWetransferViaHiddenTab(shareUrl) {
   try {
     const tab = await chrome.tabs.create({ url: shareUrl, active: false });
     tabId = tab.id;
-    console.log("[PA Background] WeTransfer: opened hidden tab", tabId, "for", shareUrl);
     let downloadUrl = null;
     const listener = (item) => {
       if (tabId != null && item.tabId != null && item.tabId !== tabId) return;
@@ -333,7 +331,6 @@ async function resolveWetransferViaHiddenTab(shareUrl) {
     if (filenameListener) chrome.downloads.onDeterminingFilename.removeListener(filenameListener);
     if (tabId != null) chrome.tabs.remove(tabId).catch(() => {});
     if (downloadUrl) {
-      console.log("[PA Background] WeTransfer: hidden tab captured URL:", downloadUrl);
       return { ok: true, directUrl: downloadUrl };
     }
     console.warn("[PA Background] WeTransfer: hidden tab", tabId, "found no download after 25 retries");
@@ -449,7 +446,6 @@ chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "onedrive-download") return;
   port.onMessage.addListener((msg) => {
     if (msg.type !== "start") return;
-    console.log("[PA Background] DOWNLOAD_ONEDRIVE_FILE (port) start:", msg.url);
     queueOneDriveDownload(msg.url, (progress) => {
       try {
         port.postMessage({ type: "progress", ...progress });
@@ -457,7 +453,6 @@ chrome.runtime.onConnect.addListener((port) => {
         /* Port evtl. schon getrennt - egal, der finale result-Versuch unten faengt das ab */
       }
     }).then((result) => {
-      console.log("[PA Background] DOWNLOAD_ONEDRIVE_FILE (port) result:", result);
       try {
         port.postMessage({ type: "result", ...result });
       } catch {
@@ -475,6 +470,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
 
+      // Log-Kanal fuer content.js: das ist ein klassisches Content-Script und
+      // kann lib/appLog.js nicht importieren (kein Modul). Seine wichtigen
+      // Ereignisse kommen deshalb hier an und werden von diesem Worker
+      // mitgeschrieben.
+      case "APP_LOG": {
+        logEvent(msg.level || "info", msg.message || "", msg.source || "content");
+        sendResponse({ ok: true });
+        break;
+      }
+
       case "UPSERT_CREATOR": {
         const creator = await upsertCreator(msg.creator);
         sendResponse({ ok: true, creator });
@@ -483,6 +488,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
       case "UPSERT_POSTS": {
         await upsertPosts(msg.posts);
+        logMilestone(`Scan: ${(msg.posts || []).length} post(s) stored`, "background");
         sendResponse({ ok: true });
         break;
       }
@@ -576,7 +582,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
 
       case "RESOLVE_MEDIAFIRE": {
-        console.log("[PA Background] RESOLVE_MEDIAFIRE start:", msg.url);
         try {
           // Hinweis: "User-Agent" ist ein von fetch()/XHR verbotener Header und
           // wird vom Browser stillschweigend ignoriert, egal was hier steht -
@@ -590,7 +595,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               "Accept-Language": "en-US,en;q=0.9",
             }
           });
-          console.log("[PA Background] RESOLVE_MEDIAFIRE fetch status:", res.status);
           const html = await res.text();
           const hrefMatch = html.match(/href=["'](https?:\/\/(?:download[a-z0-9]*|[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})\.mediafire\.com\/[^"']+)["']/i) ||
                              html.match(/href=["'](https?:\/\/[^\s"'<>]*mediafire\.com\/[^\s"'<>]*download[^\s"'<>.]*\.[a-z0-9]{2,5})["']/i) ||
@@ -605,29 +609,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               directUrl: hrefMatch[1].replace(/&amp;/g, "&"),
               filename: nameMatch ? nameMatch[1].trim() : null,
             };
-            console.log("[PA Background] RESOLVE_MEDIAFIRE resolved via regex:", result);
             sendResponse(result);
             break;
           }
           console.warn("[PA Background] RESOLVE_MEDIAFIRE regex found no match (HTML length:", html.length, ") - falling back to hidden tab.");
           const tabRes = await resolveMediafireViaHiddenTab(msg.url);
-          console.log("[PA Background] RESOLVE_MEDIAFIRE hidden-tab fallback result:", tabRes);
           sendResponse(tabRes);
         } catch (err) {
           console.warn("[PA Background] RESOLVE_MEDIAFIRE fetch/regex path threw, falling back to hidden tab:", err.message);
           const tabRes = await resolveMediafireViaHiddenTab(msg.url);
-          console.log("[PA Background] RESOLVE_MEDIAFIRE hidden-tab fallback result:", tabRes);
           sendResponse(tabRes);
         }
         break;
       }
 
       case "RESOLVE_WETRANSFER": {
-        console.log("[PA Background] RESOLVE_WETRANSFER start:", msg.url);
         try {
           const headRes = await fetch(msg.url, { method: "GET", redirect: "follow" });
           const finalUrl = headRes.url;
-          console.log("[PA Background] RESOLVE_WETRANSFER resolved redirect to:", finalUrl);
           const parts = new URL(finalUrl).pathname.split("/").filter(Boolean);
           let transferId = null;
           let secHash = null;
@@ -641,7 +640,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               secHash = parts[parts.length - 1];
             }
           }
-          console.log("[PA Background] RESOLVE_WETRANSFER parsed:", { transferId, recipientId, secHash });
           if (transferId && secHash) {
             const apiEndpoint = recipientId
               ? `https://wetransfer.com/api/v4/transfers/${transferId}/recipients/${recipientId}/download`
@@ -654,11 +652,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               },
               body: JSON.stringify({ security_hash: secHash, intent: "entire_transfer" }),
             });
-            console.log("[PA Background] RESOLVE_WETRANSFER API status:", apiRes.status);
             const data = await apiRes.json();
             if (data && data.direct_link) {
               const result = { ok: true, directUrl: data.direct_link, filename: data.display_name || data.filename || null };
-              console.log("[PA Background] RESOLVE_WETRANSFER resolved via API:", result);
               sendResponse(result);
               break;
             }
@@ -666,12 +662,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           }
           console.warn("[PA Background] RESOLVE_WETRANSFER API path failed - falling back to hidden tab.");
           const tabRes = await resolveWetransferViaHiddenTab(msg.url);
-          console.log("[PA Background] RESOLVE_WETRANSFER hidden-tab fallback result:", tabRes);
           sendResponse(tabRes);
         } catch (err) {
           console.warn("[PA Background] RESOLVE_WETRANSFER API path threw, falling back to hidden tab:", err.message);
           const tabRes = await resolveWetransferViaHiddenTab(msg.url);
-          console.log("[PA Background] RESOLVE_WETRANSFER hidden-tab fallback result:", tabRes);
           sendResponse(tabRes);
         }
         break;

@@ -1,8 +1,13 @@
-import { getSettings, saveSettings, openDB, updateFileDownloadStatus, updatePostExtrasDownloaded } from "../lib/db.js";
+import { getSettings, saveSettings, openDB, updateFileDownloadStatus, updatePostExtrasDownloaded, getAllLogs } from "../lib/db.js";
 import { getLanguage, setLanguage, t } from "../lib/i18n.js";
 import { downloadItems, buildPostFolderName, sanitizeForPath, findExistingVideoFile, planDownloadSteps, MIME_EXT_MAP, buildDescriptionFileText, formatCommentsText } from "../lib/downloader.js";
 import { fetchCommentsRaw } from "../lib/tabProxy.js";
-import { downloadViaYtDlp, pingYtDlpHost, installYtDlpViaHost, installDenoViaHost, pickFolderViaBridge, runBridgeUpdate, buildYtdlpFormat, checkFileExistsViaBridge, getDefaultDownloadDir } from "../lib/nativeHost.js";
+import { installConsoleCapture, logMilestone, flush as flushAppLog } from "../lib/appLog.js";
+
+// console.warn/console.error dieses Tabs zusaetzlich ins persistente Log
+// schreiben (Konsolenausgabe bleibt unveraendert erhalten).
+installConsoleCapture("dashboard");
+import { downloadViaYtDlp, pingYtDlpHost, installYtDlpViaHost, installDenoViaHost, pickFolderViaBridge, runBridgeUpdate, buildYtdlpFormat, checkFileExistsViaBridge, getDefaultDownloadDir, getBridgeLogs } from "../lib/nativeHost.js";
 import { createVideoProgressTracker } from "../lib/videoProgress.js";
 import { checkAndStartOnboarding, startTour, isTourRunning } from "./tour.js";
 const state = {
@@ -2365,7 +2370,6 @@ function updateProgress(weightDoneAtStart, totalWeight, p) {
   // (F12) nach "[PA Thumb Debug]" filtern, um zu sehen, ob/wie oft hier
   // ueberhaupt Byte-Ticks fuer Galerie-Bilder ankommen (kind:"image").
   if (p?.filename && /thumbnail/i.test(p.filename)) {
-    console.log("[PA Thumb Debug]", { filename: p.filename, received: p?.received, total: p?.total, itemWeight: p?.itemWeight, phase: p?.phase });
   }
   // Bridge musste von Tier 1 (ZIP-Export) auf Tier 2 (Datei-fuer-Datei)
   // zurueckfallen - dem Nutzer sichtbar machen statt nur im Bridge-Log.
@@ -3185,6 +3189,8 @@ async function downloadMany(pairs) {
     });
   });
 
+  logMilestone(`Download batch started: ${pairs.length} item(s), ${plan.totalSteps} step(s), format=${state.bulkFormat}`);
+
   let results, embedResults, extraResults;
   if (state.bulkFormat === "zip") {
     showProgress("Preparing ZIP...");
@@ -3300,6 +3306,10 @@ async function downloadMany(pairs) {
   if (cancelled) {
     summary += " (cancelled)";
   }
+  logMilestone(`Download batch finished: ${summary}`);
+  // Sofort wegschreiben statt auf das Sammelfenster zu warten - direkt nach
+  // einem Batch schliesst der Nutzer den Tab am ehesten.
+  flushAppLog().catch(() => {});
   showToast(summary);
 
   // Summary for externally embedded videos handled via the bridge (or link-only).
@@ -3698,6 +3708,76 @@ if (replayBtn) {
   });
 }
 
+// ---------- Export Diagnostics ----------
+//
+// Packt alles zusammen, was man zur Ferndiagnose braucht: den persistenten
+// Log-Ringpuffer der Extension, die Log-Dateien der Bridge (falls installiert)
+// und eine Versionsuebersicht. Laeuft bewusst AUCH OHNE Bridge - dann fehlen
+// eben deren Dateien, der Rest ist trotzdem da.
+async function exportDiagnostics() {
+  const btn = el("exportDiagnosticsBtn");
+  const originalHtml = btn ? btn.innerHTML : null;
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = "Collecting…"; }
+    // Erst alles Gepufferte wegschreiben, damit auch die letzten Sekunden drin sind.
+    await flushAppLog().catch(() => {});
+
+    const zip = new JSZip();
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+
+    const manifest = chrome.runtime.getManifest();
+    const stored = await chrome.storage.local.get("installedBridgeVersion");
+    const info = {
+      generatedAt: new Date().toISOString(),
+      extensionName: manifest.name,
+      extensionVersion: manifest.version,
+      bridgeVersion: stored.installedBridgeVersion || "(not installed / not detected)",
+      bridgeReady: state.bridgeReady,
+      userAgent: navigator.userAgent,
+      language: state.lang,
+      creators: (state.creators || []).length,
+      postsInView: (state.posts || []).length,
+    };
+    zip.file("info.json", JSON.stringify(info, null, 2));
+
+    // Extension-Log als lesbare Textdatei (nicht als JSON-Wuest).
+    const entries = await getAllLogs().catch(() => []);
+    const asText = entries
+      .map((e) => `[${e.ts}] [${(e.level || "info").toUpperCase()}] (${e.source || "?"}) ${e.message}`)
+      .join("\n");
+    zip.file("extension-log.txt", asText || "(no entries)");
+
+    // Bridge-Logs - nur wenn die Bridge erreichbar ist.
+    let bridgeFiles = 0;
+    try {
+      const res = await getBridgeLogs();
+      (res.files || []).forEach((f) => {
+        zip.file(`bridge/${f.name}`, f.content || "");
+        bridgeFiles++;
+      });
+      if (res.directory) zip.file("bridge/_directory.txt", res.directory);
+    } catch { /* keine Bridge - kein Problem */ }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    await chrome.downloads.download({
+      url,
+      filename: `PatreonArchiver-diagnostics-${stamp}.zip`,
+      saveAs: true,
+    });
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    showToast(`Diagnostics exported (${entries.length} log entries, ${bridgeFiles} bridge file(s))`);
+  } catch (err) {
+    console.error("[PatreonArchiver] Export diagnostics failed:", err);
+    showToast("Could not export diagnostics - see console for details.");
+  } finally {
+    if (btn) { btn.disabled = false; if (originalHtml !== null) btn.innerHTML = originalHtml; }
+  }
+}
+
+const exportDiagBtn = el("exportDiagnosticsBtn");
+if (exportDiagBtn) exportDiagBtn.addEventListener("click", exportDiagnostics);
+
 
 el("settingsModal").addEventListener("click", (e) => {
   if (e.target.id === "settingsModal") closeSettingsModal();
@@ -3953,6 +4033,11 @@ async function refreshBridgeReady(forceVersionCheck = false) {
     await chrome.storage.local.remove("installedBridgeVersion");
   }
   if (nowReady !== state.bridgeReady) {
+    // Nur den WECHSEL protokollieren, nicht jeden 60s-Ping - sonst besteht das
+    // Log irgendwann nur noch aus "Bridge ist noch da".
+    logMilestone(nowReady
+      ? `Bridge connected (version ${ping.version || "unknown"}, yt-dlp ${ping.ytdlpVersion || "found"})`
+      : "Bridge disconnected or yt-dlp missing");
     state.bridgeReady = nowReady;
     if (state.activeCreatorId) renderPostList();
   } else {

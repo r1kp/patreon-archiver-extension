@@ -378,6 +378,19 @@
     return null;
   }
 
+  // Schreibt eine Zeile ins persistente Log der Extension. content.js ist ein
+  // KLASSISCHES Content-Script (kein Modul, siehe manifest.json) und kann
+  // lib/appLog.js nicht importieren - deshalb der Umweg ueber background.js,
+  // das den Eintrag in den IndexedDB-Ringpuffer legt und ggf. an die Bridge
+  // weiterreicht. Bewusst ohne await/Antwort: Logging darf den Scan nie bremsen.
+  function paLog(level, message) {
+    try {
+      chrome.runtime.sendMessage({ type: "APP_LOG", level, message: String(message), source: "content" }, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch { /* Kontext bereits entladen - dann eben nicht */ }
+  }
+
   async function fetchJson(url) {
     const res = await fetch(url, { credentials: "include", headers: { accept: "application/vnd.api+json" } });
     if (!res.ok) throw new Error(`HTTP ${res.status} bei ${url}`);
@@ -922,14 +935,6 @@
       return { isMember: false };
     }
 
-    // --- Diagnose-Log: bitte diesen Block bei Problemen kopieren und schicken ---
-    console.log(
-      "%c[Patreon Archiv-Manager] Membership-Diagnose (rohe API-Antwort)",
-      "color:#ff5a3c;font-weight:bold"
-    );
-    console.log(JSON.parse(JSON.stringify(data)));
-    // ---------------------------------------------------------------------------
-
     const includedMap = buildIncludedMap(data.included);
     const includedArr = [...includedMap.values()];
 
@@ -1009,17 +1014,13 @@
     let reportedTotal = false;
     while (url && safety < 500) {
       safety += 1;
-      console.log("[PatreonArchiver Debug] Requesting posts API URL:", url);
       try {
         data = await fetchJson(url);
-        console.log("[PatreonArchiver Debug] API request succeeded!");
       } catch (err) {
         console.warn("[PatreonArchiver Debug] Primary API request failed with error:", err.message);
         const fallbackUrl = url.replace(`include=${includeList}`, "include=media,user");
-        console.log("[PatreonArchiver Debug] Trying fallback URL:", fallbackUrl);
         if (fallbackUrl !== url) {
           data = await fetchJson(fallbackUrl);
-          console.log("[PatreonArchiver Debug] Fallback API request succeeded!");
         } else {
           throw err;
         }
@@ -1034,15 +1035,8 @@
       }
 
       const includedMap = buildIncludedMap(data.included);
-      console.log("[PatreonArchiver Debug] Included resource types in API response:", 
-        Array.from(new Set((data.included || []).map(i => i.type)))
-      );
       if (data.data && data.data.length > 0) {
         const firstPost = data.data[0];
-        console.log("[PatreonArchiver Debug] First post ID & Title:", firstPost.id, firstPost.attributes?.title);
-        console.log("[PatreonArchiver Debug] First post relationships keys:", Object.keys(firstPost.relationships || {}));
-        console.log("[PatreonArchiver Debug] First post relationship data for attachments:", firstPost.relationships?.attachments);
-        console.log("[PatreonArchiver Debug] First post relationship data for attachments_media:", firstPost.relationships?.attachments_media);
       }
 
       const rawPostsList = data.data || [];
@@ -1125,7 +1119,6 @@
       });
 
       if (fetchSizes) {
-        console.log("[PatreonArchiver Debug] Scanning batch. Checking sizes for files...");
         const urlsToFetch = [];
         for (const post of posts) {
           if (post.locked) continue;
@@ -1143,7 +1136,6 @@
         }
 
         if (urlsToFetch.length > 0) {
-          console.log("[PatreonArchiver Debug] Requesting background size query for URLs:", urlsToFetch);
           try {
             const response = await new Promise((resolve) => {
               chrome.runtime.sendMessage(
@@ -1151,7 +1143,6 @@
                 (res) => resolve(res || {})
               );
             });
-            console.log("[PatreonArchiver Debug] Background size response:", response);
             if (response && response.ok && response.sizes) {
               for (const post of posts) {
                 if (post.locked) continue;
@@ -1196,6 +1187,7 @@
     let campaign = null;
     let creatorExistedBefore = false;
     const scannedPostsBuffer = [];
+    paLog("info", `Scan started on ${location.href}`);
 
     try {
       setStatus(L("panelSearching"), { indeterminate: true });
@@ -1220,7 +1212,6 @@
         chrome.runtime.sendMessage({ type: "GET_SETTINGS" }, (res) => resolve(res || {}));
       });
       const fetchSizes = settingsResult.settings?.fetchSizesDuringScan === true;
-      console.log("[PatreonArchiver Debug] fetchSizes setting during scan is:", fetchSizes);
 
       setStatus(L("panelScanning", campaign.name), { indeterminate: true });
       let total = 0;
@@ -1292,10 +1283,12 @@
         setStatus("Scan cancelled.", { progress: 0 });
       } else {
         console.error("[Patreon Archiv-Manager]", err);
+        paLog("error", `Scan failed: ${err?.message || err}`);
         setStatus(L("panelError", err.message), { progress: 0 });
       }
     } finally {
       const wasCancelled = scanCancelRequested;
+      paLog("info", `Scan finished: ${scannedPostsBuffer.length} post(s)${wasCancelled ? " (cancelled by user)" : ""}${campaign ? ` for campaign ${campaign.id}` : ""}`);
       scanning = false;
       scanCancelRequested = false;
 

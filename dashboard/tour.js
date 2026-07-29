@@ -3,7 +3,7 @@
 const DEMO_CREATOR = {
   id: "demo_creator_tour",
   name: "Example Creator",
-  avatarUrl: "../icons/icon128.png",
+  avatarUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><circle cx='64' cy='64' r='64' fill='%232a2a35'/><circle cx='64' cy='46' r='24' fill='%238a8a9a'/><path d='M20 110 c0-28 20-40 44-40 s44 12 44 40 Z' fill='%238a8a9a'/></svg>",
   membership: { isMember: true, tierName: "VIP Supporter", tierPosition: 1, tiersTotal: 3 },
   lastScanned: Date.now()
 };

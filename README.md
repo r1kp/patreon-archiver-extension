@@ -21,6 +21,7 @@
 
 - [About](#about)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Installation](#installation)
 - [How It Works](#how-it-works)
 - [Cloud Provider Support](#cloud-provider-support)
@@ -40,6 +41,24 @@
 ⚠️ **For content you already have legitimate access to only** (your own page, or a paid membership). The extension only downloads what your logged-in browser session can already see; it does not bypass paywalls of any kind.
 
 Patreon gives creators and supporters no built-in way to back up what they've posted or paid for. **Patreon Archiver** fixes that: point it at a creator's posts page, scan, and it builds a complete, organized local archive, with one folder per post containing the thumbnail, video, description, comments, and every attachment or linked file neatly named and sorted.
+
+---
+
+## Screenshots
+
+<div align="center">
+
+<img src="assets/screenshot-dashboard.jpg" alt="Dashboard overview" width="49%" />
+<img src="assets/screenshot-post-expanded.jpg" alt="Expanded post with cloud downloads" width="49%" />
+
+<img src="assets/screenshot-download-progress.jpg" alt="Download in progress" width="49%" />
+<img src="assets/screenshot-download-done.jpg" alt="Completed download" width="49%" />
+
+<img src="assets/screenshot-settings.jpg" alt="Settings panel" width="49%" />
+
+<sub>Dashboard overview, an expanded post with cloud-link downloads, a download in progress, a completed download, and the settings panel.</sub>
+
+</div>
 
 ---
 

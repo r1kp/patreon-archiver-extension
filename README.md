@@ -9,7 +9,7 @@
 [![Manifest](https://img.shields.io/badge/Manifest-V3-ff5a3c.svg)](#architecture)
 [![Version](https://img.shields.io/badge/version-1.0.0-ff5a3c.svg)](https://github.com/r1kp/patreon-archiver-extension/releases/latest)
 
-**A Chrome extension that scans your own or purchased Patreon subscriptions and downloads posts — text, images, videos, and attachments — into a clean, organized folder structure on your disk.**
+**A Chrome extension that scans your desired Patreon creator's posts and downloads them (text, images, videos, and attachments) into a clean, organized folder structure on your disk.**
 
 [Download](#installation) · [Features](#features) · [How It Works](#how-it-works) · [Cloud Providers](#cloud-provider-support) · [Related Projects](#related-projects)
 
@@ -37,26 +37,26 @@
 
 ## About
 
-⚠️ **For content you already have legitimate access to only** (your own page, or a paid membership). The extension only ever downloads what your logged-in browser session can already see — it does not bypass paywalls of any kind.
+⚠️ **For content you already have legitimate access to only** (your own page, or a paid membership). The extension only downloads what your logged-in browser session can already see; it does not bypass paywalls of any kind.
 
-Patreon gives creators and supporters no built-in way to back up what they've posted or paid for. **Patreon Archiver** fixes that: point it at a creator's posts page, scan, and it builds a complete, organized local archive — one folder per post, with the thumbnail, video, description, comments, and every attachment or linked file neatly named and sorted.
+Patreon gives creators and supporters no built-in way to back up what they've posted or paid for. **Patreon Archiver** fixes that: point it at a creator's posts page, scan, and it builds a complete, organized local archive, with one folder per post containing the thumbnail, video, description, comments, and every attachment or linked file neatly named and sorted.
 
 ---
 
 ## Features
 
-- **Scan panel on patreon.com** — appears automatically on any creator's posts page. One click scans the full profile through Patreon's own internal data API, picking up titles, full text, publish dates, post type, embedded images/videos/audio, attachments, and external cloud links. Locked posts (no active membership) are clearly flagged instead of silently skipped.
-- **Dashboard** (its own tab) — overview of every scanned creator, post list with text preview, filtering by file type / download status, full-text search, sorting, header-level checkboxes for bulk selection, and per-file selection when a post is expanded.
-- **Real, byte-accurate progress** — per file, per post (aggregated), and globally (corner overlay), including live speed and ETA. No guessed percentages.
-- **Post-accurate folder structure** — every post gets its own subfolder containing its thumbnail, video (native file or a link file for external embeds), description, comments (best-effort), and a `Download Files/` folder for attachments and cloud links.
-- **Automated cloud-link downloads** — files and folders behind external share links are detected and downloaded automatically (via the [Bridge](#related-projects), see below), each into a subfolder named after the link text the creator themselves used.
-- **Settings** — language (English/German), storage location (Downloads subfolder or a freely chosen folder), file naming (date prefix/suffix/none, post ID on/off), and which extras (thumbnail/description/comments) get downloaded.
-- **Interactive tour** — a guided walkthrough of the dashboard, replayable anytime from Help & About.
+- **Scan panel on patreon.com:** appears automatically on any creator's posts page. One click scans the full profile through Patreon's own internal data API, picking up titles, full text, publish dates, post type, embedded images/videos/audio, attachments, and external cloud links. Locked posts (no active membership) are clearly flagged instead of silently skipped.
+- **Dashboard** (its own tab): overview of every scanned creator, post list with text preview, filtering by file type / download status, full-text search, sorting, header-level checkboxes for bulk selection, and per-file selection when a post is expanded.
+- **Real, byte-accurate progress:** per file, per post (aggregated), and globally (corner overlay), including live speed and ETA. No guessed percentages.
+- **Post-accurate folder structure:** every post gets its own subfolder containing its thumbnail, video (native file or a link file for external embeds), description, comments (best-effort), and a `Download Files/` folder for attachments and cloud links.
+- **Automated cloud-link downloads:** files and folders behind external share links are detected and downloaded automatically (via the [Bridge](#related-projects), see below), each into a subfolder named after the link text the creator themselves used.
+- **Settings:** language (English/German), storage location (Downloads subfolder or a freely chosen folder), file naming (date prefix/suffix/none, post ID on/off), and which extras (thumbnail/description/comments) get downloaded.
+- **Interactive tour:** a guided walkthrough of the dashboard, replayable anytime from Help & About.
 
 ### A note on videos
 
-- **Natively uploaded Patreon videos** download directly as real files — Patreon's API provides an actual download URL for these.
-- **Externally embedded videos** (YouTube, Vimeo, …) — Patreon's API only ever provides a link for these, never a file. The link is always saved as a text file; optionally, the video itself can be downloaded via the Bridge using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+- **Natively uploaded Patreon videos** download directly as real files, since Patreon's API provides an actual download URL for these.
+- **Externally embedded videos** (YouTube, Vimeo, and similar): Patreon's API only ever provides a link for these, never a file. The link is always saved as a text file; optionally, the video itself can be downloaded via the Bridge using [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
 ---
 
@@ -65,12 +65,12 @@ Patreon gives creators and supporters no built-in way to back up what they've po
 1. Download the latest **`patreon-archiver-vX.X.X.zip`** from the [Releases page](https://github.com/r1kp/patreon-archiver-extension/releases/latest) and unzip it.
 2. Open `chrome://extensions` and enable **Developer mode** (top right).
 3. Click **"Load unpacked"** and select the unzipped `patreon-archiver` folder.
-4. Open a creator's posts page you have access to (e.g. `patreon.com/c/<name>/posts`) — the scan panel appears in the bottom-right corner.
+4. Open a creator's posts page you have access to (e.g. `patreon.com/c/<name>/posts`); the scan panel appears in the bottom-right corner.
 
 ### Requirements
 
 - Google Chrome (or any Chromium-based browser supporting Manifest V3)
-- Optional: [Patreon Archiver Bridge](#related-projects) — a small Windows companion app, needed for external video downloads and free folder selection (see [How It Works](#how-it-works))
+- Optional: [Patreon Archiver Bridge](#related-projects), a small Windows companion app needed for external video downloads and free folder selection (see [How It Works](#how-it-works))
 
 ---
 
@@ -80,9 +80,9 @@ Patreon gives creators and supporters no built-in way to back up what they've po
 patreon.com  <── content script (scan) ──>  Extension  <── native messaging ──>  Bridge  <──>  File System
 ```
 
-`content.js` runs on patreon.com and reads posts through Patreon's own internal JSON API — nothing is scraped from rendered HTML. Scanned data is stored locally (IndexedDB) and shown in the Dashboard, where downloads are triggered.
+`content.js` runs on patreon.com and reads posts through Patreon's own internal JSON API; nothing is scraped from rendered HTML. Scanned data is stored locally (IndexedDB) and shown in the Dashboard, where downloads are triggered.
 
-A Chrome extension cannot launch external programs (like `yt-dlp`) or write to arbitrary absolute file paths — that's a hard browser sandbox limit, not a limitation of this extension. For native Patreon files, downloads go through Chrome's own `chrome.downloads` API or the File System Access picker. For external videos, cloud-provider links, and truly free folder selection, the extension talks to the companion **[Patreon Archiver Bridge](#related-projects)** over Chrome's Native Messaging protocol.
+A Chrome extension cannot launch external programs (like `yt-dlp`) or write to arbitrary absolute file paths; that's a hard browser sandbox limit, not a limitation of this extension. For native Patreon files, downloads go through Chrome's own `chrome.downloads` API or the File System Access picker. For external videos, cloud-provider links, and truly free folder selection, the extension talks to the companion **[Patreon Archiver Bridge](#related-projects)** over Chrome's Native Messaging protocol.
 
 ---
 
@@ -95,7 +95,7 @@ External file/folder links posted alongside a creator's content are detected aut
 | ✅ **Supported** | Google Drive (files & folders), Dropbox, MEGA, OneDrive, MediaFire, PixelDrain, WeTransfer |
 | 🔍 **Detected, not yet automated** | iCloud, Sync.com, Box, pCloud, Proton Drive, Yandex Disk, TeraBox, Gofile, SwissTransfer, Smash, Filemail, KrakenFiles, 4shared, Sendspace |
 
-Providers in the second group are recognized and clearly flagged as unsupported instead of silently producing a broken download — support can be added on request (see [Roadmap & Feedback](#roadmap--feedback)).
+Providers in the second group are recognized and clearly flagged as unsupported instead of silently producing a broken download. Support can be added on request (see [Roadmap & Feedback](#roadmap--feedback)).
 
 ---
 
@@ -103,9 +103,9 @@ Providers in the second group are recognized and clearly flagged as unsupported 
 
 | Component | Responsibility |
 |---|---|
-| `content.js` | Runs on patreon.com — scans posts via Patreon's internal API |
-| `background.js` | Service worker — IndexedDB persistence, dashboard tab lifecycle, update checks |
-| `dashboard/` | Main UI (own tab) — filtering, search, sorting, settings, download orchestration |
+| `content.js` | Runs on patreon.com, scans posts via Patreon's internal API |
+| `background.js` | Service worker: IndexedDB persistence, dashboard tab lifecycle, update checks |
+| `dashboard/` | Main UI (own tab): filtering, search, sorting, settings, download orchestration |
 | `lib/downloader.js` | Bulk download engine, per-post folder naming, write-path selection |
 | `lib/nativeHost.js` | All Native Messaging calls to the Bridge (yt-dlp, folder picker, chunked writes) |
 | `lib/cloudDownloader.js` | Detection/resolution of third-party cloud links embedded in posts |
@@ -116,7 +116,7 @@ Providers in the second group are recognized and clearly flagged as unsupported 
 
 ## Development
 
-No build step — plain JS, loaded unpacked directly.
+No build step; plain JS, loaded unpacked directly.
 
 ```powershell
 git clone https://github.com/r1kp/patreon-archiver-extension.git
@@ -124,7 +124,7 @@ git clone https://github.com/r1kp/patreon-archiver-extension.git
 
 Then load the folder via `chrome://extensions` → **Load unpacked**, as described in [Installation](#installation). After editing a file, reload the extension (service worker) and refresh the affected tab (patreon.com for `content.js`, the dashboard tab for `dashboard.js`/`downloader.js`).
 
-There is no automated test suite — verification is manual: run a scan and a download against a real patreon.com profile.
+There is no automated test suite; verification is manual: run a scan and a download against a real patreon.com profile.
 
 ---
 

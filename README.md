@@ -54,7 +54,7 @@ Patreon gives creators and supporters no built-in way to back up what they've po
 <img src="assets/screenshot-download-progress.jpg" alt="Download in progress" width="49%" />
 <img src="assets/screenshot-download-done.jpg" alt="Completed download" width="49%" />
 
-<img src="assets/screenshot-settings.jpg" alt="Settings panel" width="100%" />
+<img src="assets/screenshot-settings.jpg" alt="Settings panel" width="50%" />
 
 <sub>Dashboard overview, an expanded post with cloud-link downloads, a download in progress, a completed download, and the settings panel.</sub>
 

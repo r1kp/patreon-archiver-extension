@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patreon Archiver · Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo"><img src="../icons/icon128.png" alt="" /></div>
+        <div>
+          <h1 id="appTitle">Archiv-Manager</h1>
+          <p id="sidebarSub">Deine Patreon-Profile</p>
+        </div>
+      </div>
+      <div id="creatorList" class="creator-list"></div>
+      <button id="downloadWarningsBtn" class="settings-btn download-warnings-btn" title="Download Issues" style="display:none;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span id="downloadWarningsLabel">Issues</span>
+        <span id="downloadWarningsCount" class="download-warnings-count">0</span>
+      </button>
+      <button id="settingsBtn" class="settings-btn" title="Settings">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span id="settingsBtnLabel">Settings</span>
+      </button>
+      <button id="helpBtn" class="settings-btn" title="Help & about">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span>Help &amp; about</span>
+      </button>
+    </aside>
+
+    <main class="content">
+      <div id="updateBannerContainer" class="update-banner-container" style="display: none;"></div>
+
+      <div id="emptyState" class="empty-state" style="display:none;">
+        <div class="empty-icon">🗂️</div>
+        <h2 id="emptyTitle">Noch kein Profil ausgewählt</h2>
+        <p id="emptyText">Öffne links ein gescanntes Profil oder starte auf patreon.com einen neuen Scan.</p>
+      </div>
+
+      <div id="creatorView" class="creator-view" style="display:none;">
+        <header class="view-header">
+          <img id="creatorAvatar" class="avatar" src="" alt="" />
+          <div class="view-header-text">
+            <h2 id="creatorName"></h2>
+            <p id="creatorMeta"></p>
+          </div>
+          <button id="deleteCreatorBtn" class="ghost-btn">Entfernen</button>
+        </header>
+
+        <div class="toolbar">
+          <input id="searchInput" type="search" />
+          <select id="typeFilter"></select>
+          <label class="toolbar-toggle" id="hideDownloadedToggle" style="display: none;">
+            <span id="hideDownloadedLabel">Hide already downloaded</span>
+            <span class="switch"><input type="checkbox" id="hideDownloadedCheck" /><span class="slider"></span></span>
+          </label>
+          <select id="lockFilter"></select>
+          <select id="sortOrder"></select>
+        </div>
+
+        <div class="bulk-bar">
+          <button id="selectAllToggle" class="select-all-btn">
+            <span class="checkmark" id="selectAllCheckmark"></span>
+            <span id="selectAllLabel">Alle sichtbaren Dateien auswählen</span>
+          </button>
+          <span id="selectionCount" class="selection-count">0 ausgewählt</span>
+          <div class="spacer"></div>
+          <div class="format-toggle" id="formatToggle">
+            <button class="format-opt active" data-format="files" id="formatFilesBtn">Einzelne Dateien</button>
+            <button class="format-opt" data-format="zip" id="formatZipBtn">Als ZIP</button>
+          </div>
+          <button id="downloadSelectedBtn" class="primary-btn" disabled>Ausgewählte herunterladen</button>
+          <button id="downloadAllBtn" class="primary-btn outline">Alle gefilterten herunterladen</button>
+        </div>
+
+        <div id="postList" class="post-list"></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="welcomeModal" class="modal-overlay" style="display:none;">
+    <div class="modal welcome-modal" style="max-width: 440px; text-align: center; padding: 28px 24px;">
+      <img src="../icons/icon128.png" width="56" height="56" alt="Logo" style="margin-bottom: 14px; border-radius: var(--radius-lg); display: inline-block;" />
+      <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Welcome to Patreon Archiver!</h3>
+      <p style="font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 24px;">
+        Everything you need to archive and organize your favorite Patreon content. Take a quick 1-minute interactive tour to explore key features.
+      </p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button id="skipTourBtn" class="ghost-btn" style="margin-left: 0; padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px;">Skip for now</button>
+        <button id="startTourBtn" class="primary-btn" style="padding: 9px 20px; border-radius: var(--radius-sm); font-size: 13px;">Start Interactive Tour</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="whatsNewOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal whats-new-modal">
+      <div class="modal-header">
+        <h3>What's New?</h3>
+        <span class="modal-close" id="whatsNewClose">✕</span>
+      </div>
+      <div class="modal-section" style="margin-top: 15px;">
+        <div class="version-badge-flow" style="display: flex; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 15px; font-weight: 600; color: var(--text-dim);">
+          <span>Extension updated</span>
+          <span class="v-badge" id="whatsNewPrevVersion" style="background: var(--bg-elevated); padding: 3px 8px; border-radius: var(--radius-xs); font-size: 11px;">v1.0.0</span>
+          <span>➔</span>
+          <span class="v-badge" id="whatsNewNewVersion" style="background: var(--accent-dim); color: var(--accent); padding: 3px 8px; border-radius: var(--radius-xs); font-size: 11px;">v1.0.0</span>
+        </div>
+        <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 700;">Changes in this release:</label>
+        <div id="whatsNewChangelogList" style="margin-top: 10px; max-height: 200px; overflow-y: auto; font-size: 12.5px; line-height: 1.6; color: var(--text); padding-right: 5px;">
+          <ul id="changelogListUl" style="margin: 0; padding-left: 15px;"></ul>
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top: 20px; justify-content: space-between; display: flex;">
+        <a href="https://github.com/r1kp/patreon-archiver-extension" id="whatsNewGithubLink" target="_blank" class="ghost-btn" style="margin-left: 0; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 12px; text-decoration: none;">Show more on GitHub</a>
+        <button class="primary-btn" id="whatsNewDismissBtn" style="padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px;">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="onboardingOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="onboardingTitle">One more thing</h3>
+        <span class="modal-close" id="onboardingClose">✕</span>
+      </div>
+      <p class="hint" id="onboardingText" style="font-size:13px; color: var(--text); line-height:1.6;"></p>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button class="ghost-btn" id="onboardingLaterBtn" style="margin-left:0;"></button>
+        <button class="primary-btn" id="onboardingSetupBtn"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="helpModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Help &amp; about</h3>
+        <span class="modal-close" id="helpClose">✕</span>
+      </div>
+
+      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 16px; margin-top: 14px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <strong style="font-size: 13px; color: var(--text); display: block; margin-bottom: 2px;">Interactive Tour</strong>
+          <span style="font-size: 11.5px; color: var(--text-dim);">Replay feature walkthrough anytime</span>
+        </div>
+        <button id="replayTourBtn" class="primary-btn outline sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 14px; border-radius: var(--radius-sm);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Start Tour
+        </button>
+      </div>
+
+      <div class="modal-section">
+        <label>How it works</label>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">1</span>
+            <p class="hint" style="margin: 0; font-size: 12px; line-height: 1.5;">Open a creator's <b>Posts</b> page on patreon.com. A panel appears bottom-right.</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">2</span>
+            <p class="hint" style="margin: 0; font-size: 12px; line-height: 1.5;">Click <b>Scan</b> to collect that creator's posts and metadata.</p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">3</span>
+            <p class="hint" style="margin: 0; font-size: 12px; line-height: 1.5;">Open this dashboard, pick files, and hit <b>Download</b>.</p>
+          </div>
+        </div>
+        <p class="hint" style="margin-top: 12px; font-size: 11px; border-left: 2px solid var(--accent); padding-left: 8px; line-height: 1.5;">
+          Files are organized into folders per creator and post (including thumbnail, video, comments, description, and attached files).
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <label>The bridge</label>
+        <p class="hint" style="line-height:1.7; font-size: 12px;">
+          A one-time local helper lets the extension save to any folder and download external videos (YouTube/Vimeo). Without it, downloads can't run reliably. Set it up under <b>Settings → Bridge</b>.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <label>Supported Cloud Providers</label>
+        <p class="hint" style="margin-bottom: 10px; font-size: 12px; line-height: 1.5;">
+          Automatic file extraction and direct downloads are integrated for the following cloud services:
+        </p>
+        <div class="cloud-hosts-grid">
+          <div class="cloud-host-badge" data-tooltip="Dropbox">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M6 2l6 3.8-6 3.8L0 5.8 6 2zm12 0l6 3.8-6 3.8-6-3.8L18 2zM0 13.4l6-3.8 6 3.8-6 3.8-6-3.8zm24 0l-6-3.8-6 3.8 6 3.8 6-3.8zM6 18.2l6-3.8 6 3.8-6 3.8-6-3.8z"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="Google Drive">
+            <svg viewBox="0 0 24 24" width="22" height="22">
+              <path d="M7.250 3.215 A789.828 789.861 0.0 0 0 3.620 9.534 L0.000 15.868 L1.890 19.166 L3.775 22.463 L7.395 16.128 L11.013 9.798 L9.133 6.511 C8.100 4.704 7.255 3.220 7.250 3.214 Z" fill="#ffffff" stroke="var(--bg-elevated)" stroke-width="1.2" stroke-linejoin="round"></path>
+              <path d="M12.010 1.485 C9.928 1.485 8.256 1.505 8.267 1.532 C8.277 1.552 9.975 4.533 12.041 8.152 L15.801 14.726 L19.561 14.726 C21.642 14.726 23.314 14.706 23.303 14.679 C23.298 14.659 21.595 11.678 19.528 8.059 L15.768 1.485 Z" fill="#b0b0b8" stroke="var(--bg-elevated)" stroke-width="1.2" stroke-linejoin="round"></path>
+              <path d="M9.509 15.867 L9.306 16.215 C9.192 16.413 8.346 17.887 7.426 19.502 A423.930 423.948 0.0 0 1 5.728 22.472 C5.718 22.498 8.968 22.514 12.950 22.514 L20.194 22.514 L21.990 19.357 C22.982 17.623 23.840 16.127 23.896 16.034 L24.000 15.867 L16.751 15.867 Z" fill="#707078" stroke="var(--bg-elevated)" stroke-width="1.2" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="OneDrive">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M19.35 10.04A7.49 7.49 0 0012 4a7.48 7.48 0 00-6.64 4.04A5.996 5.996 0 000 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95A5.48 5.48 0 0112 6c2.62 0 4.88 1.86 5.37 4.43l.21 1.09 1.11.08C20.47 11.73 22 13.2 22 15c0 1.65-1.35 3-3 3z"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="MEGA">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.5 14h-1.87v-5.22L12.7 14h-1.4l-1.93-3.22V16H7.5V8h1.88l2.62 4.38L14.62 8h1.88v8z"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="MediaFire">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M11.13 7.171c-.496.42 2.943-.458 2.6 1.239-.332 1.633-3.62-.343-7.223-.176-1.594.073-3.054.53-3.985 1.668.973-1.108 2.901-.844 2.398-.081-1.172 1.776-3.376.497-4.92 3.975.185-.4.685-1.196 2.843-1.526 1.586-.242 4.214-.016 5.054 1.297.924 1.444-3.759 1.28-1.167 1.573 3.593.406 6.299 3.31 9.813 3.311 4.55 0 7.422-2.324 7.457-6.146.063-6.923-9.101-8.318-12.87-5.134zm6.768 7.554c-1.195-.033-2.404-.512-3.364-.98-2.365-1.155-3.338-1.553-3.338-1.608 0-.067 1.42.484 3.813-.789 1.383-.735 1.432-1.377 2.89-1.505 1.73-.152 2.962 1.13 2.962 2.478 0 1.349-1.222 2.453-2.963 2.404z"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="PixelDrain">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M 12.000 0.960 C 5.906 0.960 1.000 5.906 1.000 12.040 C 1.000 18.133 5.946 23.040 12.000 23.040 C 18.094 23.040 23.000 18.094 23.000 12.040 C 23.000 5.946 18.054 0.960 12.000 0.960 Z M 12.000 21.378 C 6.801 21.378 2.583 17.168 2.583 11.960 C 2.583 6.753 6.793 2.543 12.000 2.543 C 17.199 2.543 21.417 6.753 21.417 11.960 C 21.417 17.160 17.207 21.378 12.000 21.378 Z M 12.000 4.047 C 7.640 4.047 4.102 7.584 4.102 11.945 C 4.102 16.305 7.640 19.842 12.000 19.842 C 16.360 19.842 19.898 16.305 19.898 11.945 C 19.898 7.584 16.360 4.047 12.000 4.047 Z M 15.901 6.896 C 16.589 6.896 17.144 7.453 17.144 8.138 C 17.144 8.826 16.587 9.381 15.901 9.381 C 15.216 9.381 14.659 8.823 14.659 8.138 C 14.659 7.450 15.216 6.896 15.901 6.896 Z M 12.000 5.313 C 12.688 5.313 13.242 5.870 13.242 6.555 C 13.242 7.243 12.685 7.798 12.000 7.798 C 11.315 7.798 10.758 7.241 10.758 6.555 C 10.758 5.868 11.315 5.313 12.000 5.313 Z M 8.146 6.896 C 8.834 6.896 9.388 7.453 9.388 8.138 C 9.388 8.826 8.831 9.381 8.146 9.381 C 7.461 9.381 6.904 8.823 6.904 8.138 C 6.904 7.450 7.461 6.896 8.146 6.896 Z M 5.376 11.945 C 5.376 11.257 5.933 10.702 6.619 10.702 C 7.304 10.702 7.861 11.259 7.861 11.945 C 7.861 12.632 7.304 13.187 6.619 13.187 C 5.931 13.187 5.376 12.630 5.376 11.945 Z M 8.146 17.136 C 7.458 17.136 6.904 16.579 6.904 15.894 C 6.904 15.208 7.461 14.651 8.146 14.651 C 8.831 14.651 9.388 15.208 9.388 15.894 C 9.388 16.579 8.831 17.136 8.146 17.136 Z M 12.000 18.774 C 11.312 18.774 10.758 18.217 10.758 17.532 C 10.758 16.844 11.315 16.289 12.000 16.289 C 12.688 16.289 13.242 16.846 13.242 17.532 C 13.242 18.219 12.685 18.774 12.000 18.774 Z M 12.000 15.055 C 10.322 15.055 8.953 13.694 8.953 12.008 C 8.953 10.330 10.314 8.961 12.000 8.961 C 13.678 8.961 15.047 10.322 15.047 12.008 C 15.047 13.686 13.686 15.055 12.000 15.055 Z M 15.901 17.136 C 15.214 17.136 14.659 16.579 14.659 15.894 C 14.659 15.208 15.216 14.651 15.901 14.651 C 16.587 14.651 17.144 15.208 17.144 15.894 C 17.144 16.579 16.587 17.136 15.901 17.136 Z M 17.373 13.187 C 16.686 13.187 16.131 12.630 16.131 11.945 C 16.131 11.257 16.688 10.702 17.373 10.702 C 18.059 10.702 18.616 11.259 18.616 11.945 C 18.616 12.632 18.059 13.187 17.373 13.187 Z"></path>
+            </svg>
+          </div>
+          <div class="cloud-host-badge" data-tooltip="WeTransfer">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M3.2 16.5L.5 7.5h3.2l1.6 5.8 1.8-5.8h2.8l1.8 5.8 1.6-5.8h3.2l-2.7 9h-3.4L8.4 11 6.6 16.5H3.2zm15.4 0c-2.4 0-4.1-1.6-4.1-4.2s1.7-4.4 4.1-4.4c2.3 0 3.8 1.5 3.8 3.8v.9h-5.2c.1 1.2.9 2 2.2 2 .8 0 1.6-.3 2.1-.8l1.5 1.6c-.9 1-2.4 1.7-4.4 1.7zm1.2-5.4c0-.9-.6-1.5-1.5-1.5s-1.5.6-1.6 1.5h3.1z"></path>
+            </svg>
+          </div>
+        </div>
+        <p class="hint" style="margin-top: 14px; font-size: 11.5px; border-left: 2px solid #eab308; padding-left: 10px; line-height: 1.55; color: var(--text-dim);">
+          <strong style="color: var(--text); font-weight: 600; display: block; margin-bottom: 2px;">Rate Limits &amp; Provider Restrictions:</strong>
+          Public file hosters (especially PixelDrain, MediaFire, MEGA &amp; Google Drive) may temporarily restrict high-volume downloads, enforce Captchas, or trigger rate-limit errors (403/429). If an automated download fails, please wait a short period or open the direct link saved in <code style="background: rgba(0, 0, 0, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 11px; color: var(--accent);">_download_links.txt</code>.
+        </p>
+      </div>
+
+      <div class="modal-section">
+        <label>Feedback &amp; Support</label>
+        <p class="hint" style="margin-bottom: 12px; font-size: 12px; line-height: 1.6;">
+          Found a bug, have feature ideas, or want to say thanks? Get in touch or support development below.
+        </p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a id="telegramLink" class="primary-btn outline" href="https://t.me/r1kpz" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+            Telegram
+          </a>
+          <a id="supportLink" class="primary-btn outline" href="https://buymeacoffee.com/r1kp" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+              <line x1="6" y1="1" x2="6" y2="4"></line>
+              <line x1="10" y1="1" x2="10" y2="4"></line>
+              <line x1="14" y1="1" x2="14" y2="4"></line>
+            </svg>
+            Buy me a coffee
+          </a>
+          <a id="githubProfileLink" class="primary-btn outline" href="https://github.com/r1kp" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 12px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+            </svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+
+      <div class="modal-section" style="border-top:1px solid var(--border); padding-top:14px; margin-bottom: 0;">
+        <p class="hint" style="margin:0;">
+          Patreon Archiver <span id="helpVersion"></span><br>
+          <span style="opacity:.7;">Built with the help of AI. Not affiliated with Patreon.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="downloadWarningsModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Download Issues</h3>
+        <span class="modal-close" id="downloadWarningsClose">✕</span>
+      </div>
+      <div class="modal-section">
+        <div id="downloadWarningsList" class="download-warnings-list"></div>
+        <button id="downloadWarningsClear" class="ghost-btn" style="margin-top: 12px;">Clear list</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="settingsTitle">Settings</h3>
+        <span class="modal-close" id="settingsClose">✕</span>
+      </div>
+
+      <div class="modal-section">
+        <label id="settingsStorageLabel">Storage location</label>
+
+        <!-- Hidden native radio inputs for JS compatibility -->
+        <div class="radio-row" style="display: none;">
+          <label class="radio-option">
+            <input type="radio" name="storageMode" id="storageModeDownloads" value="downloads" />
+            <span id="storageModeDownloadsLabel">Default location (inside your Downloads folder)</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="storageMode" id="storageModeCustomRadio" value="custom" />
+            <span id="storageModeCustomLabel">Custom folder (any drive)</span>
+          </label>
+        </div>
+
+        <!-- Premium Custom Cards -->
+        <div class="storage-selector">
+          <div class="storage-option active" id="optionDownloads">
+            <div class="storage-option-left">
+              <svg class="storage-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <div class="storage-details">
+                <span class="storage-title" id="cardDownloadsTitle">Downloads folder (default)</span>
+                <span class="storage-sub" id="cardDownloadsSub">Saves inside your standard browser Downloads folder.</span>
+              </div>
+            </div>
+            <div class="storage-check">
+              <div class="storage-dot"></div>
+            </div>
+          </div>
+          <div class="storage-option" id="optionCustom">
+            <div class="storage-option-left">
+              <svg class="storage-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <div class="storage-details">
+                <span class="storage-title" id="cardCustomTitle">Custom folder (any drive)</span>
+                <span class="storage-sub" id="cardCustomSub">Select any target folder on your system (requires desktop app).</span>
+              </div>
+            </div>
+            <div class="storage-check">
+              <div class="storage-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="downloadsModeBody" style="margin-top: 14px; margin-left: 0;">
+          <input id="subfolderInput" type="text" placeholder="PatreonArchiv" style="margin-bottom: 8px;" />
+          <p class="hint" id="downloadsPathHint" style="margin: 0;"></p>
+        </div>
+
+        <div id="customModeBody" style="margin-top: 14px; margin-left: 0;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button id="chooseFolderBtn" class="primary-btn outline" type="button" style="flex-shrink: 0;">Choose folder…</button>
+            <span class="chosen-folder" id="chosenFolderText" style="margin: 0; font-size: 12px; word-break: break-all; max-width: 100%;"></span>
+          </div>
+          <p class="hint" id="bridgeNeededHint" style="display:none; color:var(--warn); margin-top: 8px;"></p>
+          <p class="hint" id="customPathError" style="display:none; color:#e74c3c; margin-top: 8px; font-weight:600;"></p>
+        </div>
+
+        <input id="customFullPathInput" type="text" style="display:none;" />
+      </div>
+
+      <div class="modal-section">
+        <label id="namingLabel">File naming</label>
+        <select id="datePositionSelect" style="width: 100%;">
+          <option value="none">Title only (default)</option>
+          <option value="prefix">Date - Title (e.g. 2024-07-22 - Title)</option>
+          <option value="suffix">Title - Date (e.g. Title - 2024-07-22)</option>
+        </select>
+        <label class="switch-row" style="margin-top:12px;">
+          <span id="includePostIdLabel">Show post ID in folder name</span>
+          <span class="switch"><input type="checkbox" id="includePostIdCheck" /><span class="slider"></span></span>
+        </label>
+      </div>
+
+      <div class="modal-section">
+        <label>What to include</label>
+        <label class="switch-row">
+          <span>Download thumbnails</span>
+          <span class="switch"><input type="checkbox" id="includeThumbnailsCheck" checked /><span class="slider"></span></span>
+        </label>
+        <label class="switch-row">
+          <span>Save post description (.txt)</span>
+          <span class="switch"><input type="checkbox" id="includeDescriptionCheck" checked /><span class="slider"></span></span>
+        </label>
+        <label class="switch-row">
+          <span>Save comments (.txt)</span>
+          <span class="switch"><input type="checkbox" id="includeCommentsCheck" checked /><span class="slider"></span></span>
+        </label>
+        <label class="switch-row">
+          <span id="skipExistingLabel">Skip already downloaded files</span>
+          <span class="switch"><input type="checkbox" id="skipExistingCheck" checked /><span class="slider"></span></span>
+        </label>
+        <label class="switch-row" style="align-items: flex-start; gap: 12px; margin-top: 10px; display: none;">
+          <div style="flex: 1;">
+            <span id="fetchSizesDuringScanLabel" style="display: block; font-weight: 500;">Fetch file sizes during scan</span>
+            <p class="hint" id="fetchSizesDuringScanHint">Queries the size of each file in the background during the scan. May slow down the scan significantly and increases rate-limiting risks.</p>
+            <p class="hint" style="margin: 4px 0 0 0; font-size: 11px; color: #e8894a; line-height: 1.3; font-weight: 500;">Note: Sizes for locked posts/files cannot be fetched and will remain hidden.</p>
+            <p id="fetchSizesScanWarning" style="margin: 6px 0 0 0; font-size: 11px; color: #ff4d4d; font-weight: bold; display: none; line-height: 1.4;">
+               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; display: inline-block;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Note: Already scanned posts must be scanned again to retrieve their file sizes.
+            </p>
+            <p id="fetchSizesBridgeNotice" style="margin: 6px 0 0 0; font-size: 11px; color: #ff4d4d; font-weight: bold; display: none; line-height: 1.4;"></p>
+          </div>
+          <span class="switch" style="flex-shrink: 0; margin-top: 2px;"><input type="checkbox" id="fetchSizesDuringScanCheck" /><span class="slider"></span></span>
+        </label>
+      </div>
+
+      <div class="modal-section">
+        <label>Large files</label>
+        <label class="switch-row">
+          <span>Ask before downloading large files</span>
+          <span class="switch"><input type="checkbox" id="askLargeFilesCheck" /><span class="slider"></span></span>
+        </label>
+        <div id="largeThresholdRow" style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <span class="hint" style="margin: 0; font-size: 12.5px;">Ask when larger than (MB):</span>
+          <input id="largeThresholdInput" type="number" min="1" step="50" value="500" style="width: 90px; padding: 5px 8px; border-radius: var(--radius-xs); border: 1px solid var(--border); background: var(--bg-card); color: var(--fg); text-align: right;" />
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <label id="videoQualityLabel">Video Quality</label>
+        <div class="custom-select-ui" style="margin-top: 5px;">
+          <select id="videoQualitySelect">
+            <option value="best">Best Quality (1080p+)</option>
+            <option value="720">High (720p)</option>
+            <option value="480">Medium (480p)</option>
+            <option value="audio">Audio Only (.m4a)</option>
+          </select>
+        </div>
+        <p class="hint">Applies to external embedded videos. Lower qualities download faster and save disk space.</p>
+      </div>
+
+      <div class="modal-section" style="margin-bottom: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <img src="../icons/bridge_logo.png" alt="Bridge Logo" style="width: 24px; height: 24px; border-radius: var(--radius-xs); border: 1px solid var(--border); object-fit: contain;" />
+          <label id="ytdlpSectionLabel" style="margin: 0; font-weight: 700; font-size: 13px; color: var(--text);">Bridge (required for downloads)</label>
+        </div>
+        <p class="hint" id="ytdlpHint" style="margin-bottom: 12px; margin-top: 0;"></p>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button id="downloadInstallerBtn" class="primary-btn outline" type="button" style="margin-bottom: 0;"></button>
+          <div class="ytdlp-status" id="ytdlpStatus" style="flex: 1; min-width: 140px; margin-top: 0; padding: 8px 12px; font-size: 11.5px;"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top: 20px;">
+        <button id="saveSettingsBtn" class="primary-btn" style="width: 100px;">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quickJumpWidget" class="quick-jump-widget" style="display:none;">
+    <button id="qjPrevBtn" class="qj-btn" title="Previous post (Alt + Up)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+    </button>
+    <button id="qjNextBtn" class="qj-btn" title="Next post (Alt + Down)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+  </div>
+
+  <div id="progressOverlay" class="progress-panel" style="display:none;">
+    <div class="progress-box">
+      <div class="progress-header">
+        <p id="progressLabel">Downloading...</p>
+        <div class="progress-actions">
+          <button id="progressMinimize" class="progress-icon-btn" title="Minimize">–</button>
+          <button id="progressCancel" class="progress-cancel-btn">Cancel</button>
+        </div>
+      </div>
+      <div class="progress-body">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <p class="progress-post-title" id="progressPostTitle"></p>
+        <div class="progress-meta-row">
+          <p class="progress-meta" id="progressMeta"></p>
+          <p class="progress-eta" id="progressEta"></p>
+        </div>
+        <p class="progress-size" id="progressSize"></p>
+        <div class="progress-file-row" id="progressFileRow">
+          <div class="progress-file-info">
+            <span class="progress-file-label" id="progressFileLabel">Ready</span>
+            <span class="progress-file-pct" id="progressFilePct">0%</span>
+          </div>
+          <div class="progress-track progress-track-file"><div class="progress-fill progress-fill-file" id="progressFileFill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="largeFileModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 id="largeFileTitle">Large File Detected</h3>
+      </div>
+      <p id="largeFileText" class="hint" style="font-size:13.5px;color:var(--fg);line-height:1.6;margin:12px 0 20px;"></p>
+      <div class="modal-footer" style="gap:8px;justify-content:flex-end;">
+        <button class="ghost-btn" id="largeFileSkip">Skip file</button>
+        <button class="ghost-btn" id="largeFileCancelAll">Cancel all</button>
+        <button class="primary-btn" id="largeFileDownload">Download file</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="denoModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 id="denoModalTitle">YouTube Download Optimization</h3>
+      </div>
+      <p id="denoModalText" class="hint" style="font-size:13.5px;color:var(--text);line-height:1.6;">
+        YouTube requires a JavaScript runtime to solve its download challenges. Would you like to install Deno to optimize video downloads? This will download Deno (~40MB) and extract it directly to the bridge folder.
+      </p>
+      <div class="modal-footer" style="gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px;">
+        <button class="ghost-btn" id="denoModalSkip" style="margin-right:auto;">Skip (Don't show again)</button>
+        <button class="ghost-btn" id="denoModalCancel">Cancel</button>
+        <button class="primary-btn" id="denoModalInstall">Install Deno</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 id="confirmModalTitle">Remove Creator Profile</h3>
+      </div>
+      <p id="confirmModalText" class="hint" style="font-size:13.5px;color:var(--text);line-height:1.6;margin:14px 0 22px;">
+        Really remove this profile and all scanned posts from the archive? (Already downloaded files stay on disk.)
+      </p>
+      <div class="modal-footer" style="gap:10px;justify-content:flex-end;margin-top:16px;">
+        <button class="ghost-btn" id="confirmModalCancel">Cancel</button>
+        <button class="primary-btn" id="confirmModalConfirm" style="background:#ff5a3c;border-color:#ff5a3c;color:#fff;">Remove profile</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsUnsavedBanner" style="display: none; position: fixed; bottom: 25px; right: 20px; z-index: 10000; background: var(--glass-bg-strong); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1.5px solid var(--warn); border-radius: var(--radius-md); padding: 12px 16px; box-shadow: var(--shadow-md); align-items: center; gap: 10px;">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ff4d4d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    <div style="font-size: 12.5px; color: var(--text);">
+      <span id="unsavedChangesText">You have unsaved changes. Click Save below to apply.</span>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../lib/jszip.min.js"></script>
+  <script src="dashboard.js" type="module"></script>
+</body>
+</html>

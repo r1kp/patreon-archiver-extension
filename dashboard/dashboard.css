@@ -1,0 +1,1603 @@
+* { box-sizing: border-box; }
+:root {
+  --bg: #101014;
+  --bg-elevated: #18181d;
+  --bg-card: #1e1e24;
+  --border: #2a2a31;
+  --text: #f2f2f3;
+  --text-dim: #9a9aa3;
+  --accent: #ff5a3c;
+  --accent-dim: #ff5a3c33;
+  --green: #38c172;
+  --warn: #f5a623;
+
+  /* ---- Design tokens (Design-Ueberarbeitung) ----
+     Einheitliche Radius-/Schatten-/Glass-Skala, um die im Laufe der Session
+     angesammelten, leicht uneinheitlichen Werte (8/10/12/14/16/20px Radius,
+     unterschiedliche Schatten-Staerken) auf ein gemeinsames System zu ziehen.
+     Bewusst NUR neue Variablen ergaenzt - bestehende Marken-/Statusfarben
+     (--accent, --green, --warn) bleiben exakt unveraendert. */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+  /* Glass-Panel-Grundlage: dezente Transluzenz + Blur statt voller
+     Deckkraft, gemeinsam fuer Sidebar/Cards/Modals/Overlays genutzt.
+     ---- Nachgebessert (Feedback "sieht aus wie vorher"): die urspruengliche
+     Deckkraft (0.62/0.82/0.4) war zu hoch, um als "Glas" erkennbar zu sein -
+     besonders weil das Dashboard ein eigener Chrome-Tab ist (kein Overlay
+     ueber Patreon-Inhalten), es also kaum Bildkontrast HINTER den Panels
+     gibt, den der Blur sichtbar verwischen koennte. Deckkraft deutlich
+     gesenkt + der Body-Gradient (weiter unten) kraeftiger gemacht, damit
+     unter Sidebar/Cards/Modals tatsaechlich etwas "Buntes" liegt, das der
+     Blur vermischen kann. Zusaetzlich ein Sheen-Token (heller Rand oben,
+     wie eine Glaskante, die Licht einfaengt) fuer Panels, die KEINE
+     eigene, semantische Randfarbe haben (Vorsicht: nicht auf Elemente mit
+     Status-Rahmen wie .storage-option.invalid o.ae. anwenden). */
+  --glass-bg: rgba(30, 30, 36, 0.4);
+  --glass-bg-strong: rgba(22, 22, 27, 0.58);
+  --glass-bg-soft: rgba(30, 30, 36, 0.22);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: blur(20px);
+  --glass-sheen: inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Alias: mehrere Stellen (progress-file-pct, #progressConfirmModal-Buttons,
+     Zahlen-Inputs, ein paar Inline-Styles in dashboard.html) nutzten bereits
+     vorher `var(--fg)`, ohne dass die Variable je definiert wurde (Text/
+     Rahmen blieb dadurch auf dem Browser-Default statt der App-Textfarbe).
+     Kein Verhalten geaendert, nur die fehlende Definition ergaenzt. */
+  --fg: var(--text);
+}
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Deutlich kraeftiger als die erste Fassung (0.07/0.035 Deckkraft) - Grund
+     siehe Kommentar bei den Glass-Tokens oben: ohne genug Farbe/Kontrast
+     HINTER den transluzenten Panels ist ein CSS-Blur optisch nicht von einem
+     einfachen dunklen Flaechenhintergrund zu unterscheiden. Drei Farbflecken
+     (Orange oben-links, kuehleres Violett oben-rechts, Orange unten) sorgen
+     dafuer, dass die Blur-Flaeche unter Sidebar/Cards/Modals tatsaechlich
+     Farbverlauf zu vermischen hat, egal wohin man scrollt. */
+  background:
+    radial-gradient(1200px 800px at -5% -10%, rgba(255, 90, 60, 0.08) 0%, transparent 75%),
+    radial-gradient(1100px 900px at 105% 105%, rgba(45, 48, 58, 0.22) 0%, transparent 80%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+.app { display: flex; height: 100vh; }
+
+/* Premium Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px; flex-shrink: 0; background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--glass-border); display: flex; flex-direction: column;
+  /* Zusaetzlich zum Drop-Shadow ein Licht-Sheen an der rechten Kante (die dem
+     Content zugewandte "Glaskante") - macht die Transluzenz auch dort
+     erkennbar, wo kein Farbverlauf direkt dahinterliegt. */
+  box-shadow: var(--shadow-sm), inset -1px 0 0 rgba(255, 255, 255, 0.05);
+  position: relative; z-index: 1;
+}
+.sidebar-header { display: flex; gap: 11px; align-items: center; padding: 20px 18px; border-bottom: 1px solid var(--border); }
+.sidebar-header .logo {
+  width: 38px; height: 38px; border-radius: var(--radius-md); overflow: hidden;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow: var(--shadow-xs);
+}
+.sidebar-header .logo img { width: 100%; height: 100%; object-fit: cover; }
+.sidebar-header h1 { font-size: 15px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.sidebar-header p { font-size: 11.5px; color: var(--text-dim); margin: 2px 0 0; }
+
+.creator-list { overflow-y: auto; padding: 10px; flex: 1; }
+.creator-card {
+  display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: var(--radius-md);
+  cursor: pointer; margin-bottom: 6px; border: 1px solid transparent;
+  transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease);
+}
+.creator-card:hover { background: var(--bg-card); transform: translateX(1px); }
+.creator-card.active { background: var(--accent-dim); border-color: var(--accent); box-shadow: var(--shadow-xs); }
+.creator-card img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #333; }
+.creator-card .cname { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.creator-card .cmember {
+  font-size: 10.5px; color: var(--accent); font-weight: 600; margin: 1px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.creator-card .cmeta { font-size: 11px; color: var(--text-dim); }
+.creator-list-empty { color: var(--text-dim); font-size: 12.5px; padding: 14px; line-height: 1.6; }
+
+.settings-btn {
+  display: flex; align-items: center; gap: 10px; margin: 10px; padding: 10px 12px;
+  background: transparent; border: 1px solid var(--border); border-radius: var(--radius-md);
+  color: var(--text-dim); cursor: pointer; font-size: 12.5px; font-weight: 500;
+  transition: color .15s var(--ease), border-color .15s var(--ease), background .15s var(--ease);
+}
+.settings-btn:hover { color: var(--text); border-color: var(--accent); background: var(--bg-card); }
+.settings-btn svg { flex-shrink: 0; }
+
+/* Warn-Indikator ueber Rate-Limit-/Missbrauchsschutz-Fehler (403/429/509 etc.
+   von Cloud-Anbietern) - erscheint nur, wenn state.downloadWarnings nicht leer
+   ist (siehe pushDownloadWarning() in dashboard.js). */
+/* Bewusst RUHIG gestaltet: vorher Neonrot (#ff1744) plus Leucht-Schatten
+   (box-shadow 0 0 8px) - das hat wie ein Alarm gewirkt, obwohl es nur ein
+   Hinweis auf uebersprungene/fehlgeschlagene Downloads ist. Jetzt der normale
+   Warnton der App (--warn, dasselbe Amber wie abgebrochene Downloads), ohne
+   Glow. */
+.download-warnings-btn {
+  border-color: var(--warn); color: var(--warn); position: relative;
+}
+.download-warnings-btn:hover { background: rgba(245, 166, 35, 0.10); border-color: var(--warn); color: var(--warn); }
+.download-warnings-count {
+  margin-left: auto; background: var(--warn); color: #1b1b20; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; min-width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center; padding: 0 5px;
+}
+.download-warnings-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.download-warning-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color 0.2s ease;
+}
+.download-warning-item:hover { border-color: rgba(245, 166, 35, 0.45); }
+.download-warning-item .dw-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--warn);
+  border: 1px solid rgba(245, 166, 35, 0.30);
+  vertical-align: middle;
+  margin-right: 7px;
+}
+.download-warning-item .dw-title {
+  display: inline;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  vertical-align: middle;
+}
+.download-warning-item .dw-meta {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin: 4px 0 5px;
+}
+.download-warning-item .dw-detail {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Main content */
+.content { flex: 1; overflow-y: auto; padding: 30px 36px; }
+
+.empty-state { text-align: center; margin-top: 12vh; color: var(--text-dim); }
+.empty-icon { font-size: 42px; margin-bottom: 10px; }
+.empty-state h2 { color: var(--text); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.empty-state p { max-width: 420px; margin: 8px auto 0; font-size: 13px; line-height: 1.6; }
+
+.view-header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.view-header .avatar { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; background: #333; box-shadow: var(--shadow-xs); }
+.view-header-text h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.view-header-text p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-dim); }
+.ghost-btn {
+  margin-left: auto; background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+  padding: 8px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px;
+  transition: color .15s var(--ease), border-color .15s var(--ease);
+}
+.ghost-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+.toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar input[type="search"] {
+  flex: 1; min-width: 220px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;
+  transition: all 0.2s ease;
+}
+.toolbar input[type="search"]:hover {
+  border-color: var(--text-dim);
+}
+.toolbar input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.toolbar select,
+.modal-section select {
+  -webkit-appearance: none; appearance: none;
+  background-color: var(--bg-card);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9aa3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 10px 34px 10px 14px; color: var(--text); font-size: 12.5px; cursor: pointer;
+  outline: none; transition: all 0.2s ease;
+}
+.toolbar select:hover, .modal-section select:hover {
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ff5a3c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.toolbar select:focus, .modal-section select:focus {
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ff5a3c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.toolbar-toggle {
+  display: flex; align-items: center; gap: 10px;
+  background-color: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 0 14px; cursor: pointer; user-select: none; transition: all 0.2s ease;
+}
+.toolbar-toggle:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.toolbar-toggle span:first-child { font-size: 12.5px; color: var(--text); white-space: nowrap; }
+
+.bulk-bar {
+  display: flex; align-items: center; gap: 14px; background: rgba(24, 24, 29, 0.64);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 18px;
+  flex-wrap: wrap; position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm), var(--glass-sheen);
+}
+.select-all-btn {
+  display: flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 12px; cursor: pointer; color: var(--text-dim); font-size: 12.5px;
+  transition: border-color .15s var(--ease), color .15s var(--ease);
+}
+.select-all-btn:hover { border-color: var(--accent); color: var(--text); }
+.select-all-btn .checkmark {
+  width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--text-dim);
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.select-all-btn.checked .checkmark { background: var(--accent); border-color: var(--accent); }
+.select-all-btn.checked .checkmark::after { content: "✓"; color: #fff; font-size: 11px; line-height: 1; }
+.select-all-btn.indeterminate .checkmark { background: var(--accent-dim); border-color: var(--accent); }
+.select-all-btn.indeterminate .checkmark::after { content: "–"; color: var(--accent); font-size: 12px; line-height: 1; font-weight: 700; }
+.selection-count { font-size: 12px; color: var(--text-dim); }
+.spacer { flex: 1; }
+
+.format-toggle { display: flex; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; }
+.format-opt { background: transparent; border: none; color: var(--text-dim); font-size: 11.5px; padding: 6px 11px; border-radius: var(--radius-xs); cursor: pointer; transition: background .15s var(--ease), color .15s var(--ease); }
+.format-opt.active { background: var(--accent); color: #fff; }
+.format-opt:disabled { opacity: .4; cursor: default; }
+
+.primary-btn {
+  background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 9px 16px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.primary-btn:hover:not(:disabled) {
+  background: #ff7a62;
+  box-shadow: 0 6px 16px rgba(255, 90, 60, 0.3);
+  transform: translateY(-1px);
+}
+.primary-btn:active:not(:disabled) { transform: translateY(0); }
+.primary-btn:disabled { background: #3a3a41; color: #777; cursor: default; }
+.primary-btn.outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+/* .outline und :disabled haben gleiche Spezifitaet - ohne diese Regel
+   gewinnt .outline rein durch Reihenfolge und ein deaktivierter
+   "Download all filtered"-Button (primary-btn outline) sah trotz disabled=true
+   weiterhin normal aus (Akzentfarbe statt ausgegraut). */
+.primary-btn.outline:disabled { background: #3a3a41; border-color: #3a3a41; color: #777; cursor: default; }
+.primary-btn.outline:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(255, 90, 60, 0.25);
+  transform: translateY(-1px);
+}
+.primary-btn.outline:active:not(:disabled) { transform: translateY(0); }
+
+.post-list { display: flex; flex-direction: column; gap: 10px; }
+.post-card {
+  background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 15px 17px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-xs), var(--glass-sheen);
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease), transform .15s var(--ease), background .15s var(--ease);
+}
+/* Hover-Lift: leichtes Anheben + staerkerer Schatten + minimal hellere
+   Glass-Flaeche - macht "das ist eine schwebende Glas-Karte" auch ohne viel
+   Bildkontrast dahinter spuerbar. */
+.post-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-md), var(--glass-sheen);
+  transform: translateY(-1px);
+  background: rgba(38, 38, 45, 0.46);
+}
+.post-card-top { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; }
+.post-card-top .toggle { color: var(--text-dim); font-size: 12px; margin-top: 3px; }
+.post-select {
+  width: 18px; height: 18px; border-radius: var(--radius-xs); border: 1.5px solid var(--border); background: var(--bg-elevated);
+  flex-shrink: 0; margin-top: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: border-color .12s var(--ease), background .12s var(--ease);
+}
+.post-select:hover { border-color: var(--accent); }
+.post-select.checked { background: var(--accent); border-color: var(--accent); }
+.post-select.checked::after { content: "✓"; color: #fff; font-size: 11px; }
+.post-select.indeterminate { background: var(--accent-dim); border-color: var(--accent); }
+.post-select.indeterminate::after { content: "–"; color: var(--accent); font-weight: 700; font-size: 12px; }
+.post-select.no-files { opacity: .25; pointer-events: none; }
+.post-card-title { font-size: 14px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 4px; }
+.patreon-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.patreon-link-btn:hover {
+  color: var(--accent);
+  background-color: rgba(255, 90, 60, 0.1);
+  transform: translate(1px, -1px);
+}
+.post-card-date { font-size: 11.5px; color: var(--text-dim); margin: 3px 0 0; }
+.post-card-badges { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; align-items: center; }
+.badge {
+  font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: #2a2a31; color: var(--text-dim);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.badge svg { width: 10px; height: 10px; flex-shrink: 0; }
+/* Bewusst klar unterschiedliche Farbtoene: "locked" (Amber/Warn) vs.
+   "external-files" (Akzent-Orange) - vorher beide fast identisches Rot/Orange,
+   auf einen Blick kaum unterscheidbar. */
+.badge.locked {
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--warn);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+}
+.badge.external-files {
+  background: rgba(255, 90, 60, 0.12);
+  color: #ff8a75;
+  border: 1px solid rgba(255, 90, 60, 0.25);
+}
+.post-card-text {
+  font-size: 12.5px; color: var(--text-dim); line-height: 1.6; margin: 10px 0 0; display: none;
+  white-space: pre-wrap; max-height: 160px; overflow-y: auto;
+}
+.file-list { margin-top: 11px; display: none; flex-direction: column; gap: 6px; }
+.file-row {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 9px 12px; font-size: 12px; transition: border-color .12s var(--ease), background .12s var(--ease);
+}
+.file-row:hover { border-color: #3a3a44; }
+.file-row-main { display: flex; align-items: center; gap: 10px; }
+.fcheck-wrap { position: relative; display: inline-flex; flex-shrink: 0; cursor: pointer; width: 18px; height: 18px; }
+.fcheck-wrap input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.fcheck-box {
+  width: 18px; height: 18px; border-radius: var(--radius-xs); border: 1.5px solid var(--border);
+  background: var(--bg-card); display: inline-flex; align-items: center; justify-content: center;
+  transition: all .12s;
+}
+.fcheck-wrap input:checked + .fcheck-box { background: var(--accent); border-color: var(--accent); }
+.fcheck-wrap input:checked + .fcheck-box::after {
+  content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+.file-row .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row .fkind { color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; width: 70px; }
+.file-row .fsize { color: var(--text-dim); font-size: 11px; width: 60px; text-align: right; }
+.file-row .fdl-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: var(--radius-xs);
+  padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all .12s var(--ease);
+}
+.file-row .fdl-btn:hover { border-color: var(--accent); color: var(--accent); }
+.file-row.downloaded .fdl-btn,
+.file-row.done-session .fdl-btn {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Inline-Fortschritt pro Zeile (Variante 3 des Download-Umbaus) - ersetzt
+   das alte Modell "ein globaler Balken fuer alles"; jede Zeile bekommt ihren
+   eigenen Live-Fortschritt, da downloadItems() Items jetzt parallel abarbeitet. */
+.row-progress { display: none; align-items: center; gap: 8px; margin-top: 8px; }
+.row-progress-track {
+  flex: 1; height: 5px; border-radius: 3px; background: var(--bg-card);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.row-progress-fill {
+  height: 100%; width: 0%; background: var(--accent); border-radius: 3px;
+  transition: width .2s ease, background .2s ease;
+}
+.row-progress-fill.row-progress-done { background: var(--green); }
+.row-progress-fill.row-progress-error {
+  background: #ff1744 !important;
+  box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
+}
+.row-progress-fill.row-progress-cancelled { background: var(--warn); }
+/* Wartet auf einen freien Slot im Anbieter-Pool (noch nicht gestartet).
+   Bewusst dunkler/langsamer als der "Scanning"-Shimmer darunter: dort arbeitet
+   der Anbieter bereits, hier passiert noch gar nichts - der Unterschied soll
+   auf einen Blick erkennbar sein. */
+.row-progress-fill.row-progress-waiting {
+  width: 100% !important;
+  background: linear-gradient(90deg, #23232b 0%, #3a3a46 50%, #23232b 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 2.6s infinite linear;
+  opacity: .75;
+}
+.row-progress-fill.row-progress-scanning {
+  width: 100% !important;
+  background: linear-gradient(90deg, #25252e 0%, #a0a0b0 50%, #25252e 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 1.5s infinite linear;
+}
+
+@keyframes scanningShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.row-progress-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; min-width: 40px; text-align: right; }
+.file-row .fdl-btn.row-cancel-btn { border-color: #ff1744; color: #ff1744; }
+.file-row .fdl-btn.row-cancel-btn:hover { background: rgba(255, 23, 68, 0.12); }
+
+/* Steady state: green circle for session downloaded rows & post headers */
+.file-row.done-session .fcheck-wrap input + .fcheck-box,
+.post-select.done-session {
+  border-radius: 50%;
+  background: var(--green);
+  border-color: var(--green);
+}
+.file-row.done-session .fcheck-wrap input + .fcheck-box::after,
+.post-select.done-session::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+/* One-time entrance animation when freshly completed */
+.file-row.pop-animate .fcheck-wrap input + .fcheck-box,
+.post-select.pop-animate {
+  animation: checkPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.file-row.pop-animate .fcheck-wrap input + .fcheck-box::after,
+.post-select.pop-animate::after {
+  animation: checkDraw 0.2s ease-out 0.08s both;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes checkDraw {
+  0% { opacity: 0; transform: rotate(45deg) translateY(-1px) scale(0.5); }
+  100% { opacity: 1; transform: rotate(45deg) translateY(-1px) scale(1); }
+}
+
+/* Aggregat-Balken oben in der Post-Karte - zeigt Summe/Prozent aller gerade
+   in diesem Post aktiv ladenden Items. */
+.post-agg-progress { display: none; align-items: center; gap: 8px; margin: 8px 0 0; }
+.post-agg-track {
+  flex: 1; height: 4px; border-radius: 2px; background: var(--bg-card); overflow: hidden;
+}
+.post-agg-fill { height: 100%; width: 0%; background: var(--accent); transition: width .25s ease, background .25s ease; }
+.post-agg-fill.post-agg-done { background: var(--green); }
+.post-agg-fill.post-agg-error {
+  background: #ff1744 !important;
+  box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
+}
+.post-agg-fill.post-agg-cancelled { background: var(--warn); }
+/* Anbieter ermittelt gerade noch die echte Groesse (Drive-Baumscan, MEGA-
+   Ordnerliste): Balken behaelt seine echte Breite, bekommt aber denselben
+   wandernden Schimmer wie die Einzelzeile - "arbeitet, Dauer/Groesse noch
+   unbekannt", statt still auf einem falschen Prozentwert zu stehen.
+   background-image kommt per Inline-Style aus updatePostAggregateUI(). */
+.post-agg-fill.post-agg-scanning {
+  background-size: 200% 100%;
+  animation: scanningShimmer 1.5s infinite linear;
+}
+.post-agg-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
+.post-card.expanded .post-card-text,
+.post-card.expanded .file-list { display: flex; }
+.post-card.expanded .post-card-text { display: block; }
+
+.no-files { color: var(--text-dim); font-size: 11.5px; font-style: italic; }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+  /* Etwas deckender als die generischen Glass-Tokens (0.86 statt 0.58) -
+     ein Toast ist eine kurzlebige Statusmeldung, Lesbarkeit geht hier vor
+     maximaler Transluzenz, bekommt Blur/Sheen/Rand aber trotzdem. */
+  background: rgba(22, 22, 27, 0.86); border: 1px solid var(--glass-border); color: var(--text); padding: 10px 18px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius-md); font-size: 12.5px; opacity: 0; transition: all .25s; pointer-events: none;
+  z-index: 9999; box-shadow: var(--shadow-md), var(--glass-sheen);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Settings modal */
+.modal-overlay {
+  /* Dimmt weniger stark als vorher (0.4 statt 0.55) - laesst mehr vom
+     farbigen Body-Gradient durchscheinen, damit der Blur des Modals selbst
+     etwas zu vermischen hat statt nur eine flache Abdunkelung zu zeigen. */
+  position: fixed; inset: 0; background: rgba(8,8,10,.4); display: flex;
+  align-items: center; justify-content: center; z-index: 1000;
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+}
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.modal {
+  width: 480px; max-width: 92vw; max-height: 88vh; overflow-y: auto;
+  /* Etwas deckender als der generische --glass-bg-strong (0.7 statt 0.58) -
+     Modals sind textlastig (Settings/Help), Lesbarkeit hat Vorrang, aber
+     durch den kraeftigeren Body-Gradient + Sheen + reduziertes Overlay-Dimmen
+     (s.o.) bleibt der Glas-Effekt an den Raendern trotzdem sichtbar. */
+  background: rgba(22, 22, 27, 0.7);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-xl); padding: 24px 28px 20px;
+  backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+  box-shadow: var(--shadow-lg), var(--glass-sheen);
+  animation: modalScaleIn 0.18s var(--ease);
+  position: relative;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.modal-header h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+.modal-close {
+  cursor: pointer; color: var(--text-dim); font-size: 15px;
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; transition: all 0.15s ease;
+}
+.modal-close:hover { background: var(--bg-card); color: var(--text); }
+.modal-section {
+  margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px;
+}
+.modal-section:last-of-type {
+  border-bottom: none; padding-bottom: 0; margin-bottom: 8px;
+}
+.modal-section > label { display: block; font-size: 13px; color: var(--text); margin-bottom: 10px; font-weight: 700; }
+.modal-section input[type="text"] {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color .15s;
+}
+.modal-section input[type="text"]:focus { border-color: var(--accent); }
+.modal-section select { width: 100%; }
+.radio-row { display: flex; flex-direction: column; gap: 10px; }
+.radio-option { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+.hint { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; margin: 8px 0 0; }
+.chosen-folder { font-size: 12px; color: var(--green); font-weight: 500; }
+.modal-footer {
+  display: flex; justify-content: flex-end; margin-top: 16px;
+  position: sticky; bottom: -20px; background: var(--glass-bg-strong);
+  padding: 14px 0 4px 0; border-top: 1px solid var(--border);
+  z-index: 10;
+}
+/* Custom Storage Selection Cards */
+.storage-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+.storage-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+.storage-option:hover {
+  border-color: var(--text-dim);
+}
+.storage-option.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(255, 90, 60, 0.08);
+}
+.storage-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.storage-option.disabled:hover {
+  border-color: var(--border);
+}
+.storage-option.invalid {
+  border-color: #e74c3c !important;
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.15) !important;
+}
+.storage-option-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.storage-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.storage-option.active .storage-icon {
+  color: var(--accent);
+}
+.storage-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.storage-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.storage-sub {
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+.storage-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.storage-option.active .storage-check {
+  border-color: var(--accent);
+}
+.storage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 0.2s;
+}
+.storage-option.active .storage-dot {
+  background: var(--accent);
+}
+
+.ytdlp-status {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-size: 12px; line-height: 1.6;
+}
+.ytdlp-status .yt-ok { color: var(--green); }
+.ytdlp-status .yt-warn { color: #ffb454; }
+.ytdlp-status .yt-bad { color: #ff6b6b; }
+.ytdlp-status code {
+  background: #101014; border-radius: 5px; padding: 2px 6px; font-size: 11px; user-select: all;
+}
+.ytdlp-status button {
+  margin-top: 8px; background: var(--accent); color: #fff; border: none; border-radius: 7px;
+  padding: 6px 12px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+}
+
+/* Fortschritts-Overlay für laufende Downloads */
+.progress-panel {
+  position: fixed; bottom: 20px; right: 20px; z-index: 1100;
+  animation: progressSlideIn .25s ease-out;
+}
+@keyframes progressSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.progress-box {
+  width: 340px; max-width: calc(100vw - 40px); background: rgba(22, 22, 27, 0.66);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: 16px 18px;
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  box-shadow: var(--shadow-lg), var(--glass-sheen);
+}
+.progress-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px;
+}
+.progress-header p#progressLabel { margin: 0; font-size: 13px; font-weight: 600; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progress-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.progress-icon-btn {
+  width: 26px; height: 26px; border-radius: var(--radius-xs); border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text-dim); cursor: pointer; font-size: 15px;
+  line-height: 1; display: flex; align-items: center; justify-content: center; transition: all .12s;
+}
+.progress-icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.progress-cancel-btn {
+  border: 1px solid var(--border); background: var(--bg-card); color: var(--text-dim);
+  border-radius: var(--radius-xs); padding: 5px 12px; font-size: 11.5px; cursor: pointer; transition: all .12s;
+}
+.progress-cancel-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+.progress-track { height: 8px; border-radius: 4px; background: #2a2a31; overflow: hidden; position: relative; }
+@keyframes progress-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+@keyframes loading-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+.animated-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite steps(4);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width .25s ease-out;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Single wide soft wave flowing continuously from right to left (frequent repeat interval) */
+.progress-fill:not(.done)::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 200px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 20%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.03) 80%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: pa-wave-right-to-left 1.9s infinite linear;
+}
+
+@keyframes pa-wave-right-to-left {
+  0% { right: -200px; left: auto; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { right: 100%; left: auto; opacity: 0; }
+}
+
+.progress-fill.done::after {
+  display: none;
+}
+/* Primary-Bar-Infozeilen bewusst UNTEREINANDER statt alles in einer Zeile:
+   1) Post-Titel (eigene Zeile, Marquee bei Ueberlaenge)
+   2) Anzahl + Prozent (links) / ETA (rechts) - gehoeren inhaltlich zusammen
+   3) Groesse (MB/GB) - eigene, kleinere/dimmere Zeile */
+.progress-post-title {
+  margin: 8px 0 0; font-size: 11.5px; color: var(--text-dim); text-align: left;
+  overflow: hidden; white-space: nowrap; position: relative;
+}
+/* opacity-Uebergang fuer den weichen Namenswechsel (siehe updateProgressTitle()
+   in dashboard.js): der Name wird nicht mehr hart ersetzt, sondern kurz
+   aus- und wieder eingeblendet. */
+.progress-post-title span { display: inline-block; transition: opacity .16s ease; }
+.progress-meta-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 0 0;
+}
+.progress-meta { font-size: 11.5px; color: var(--text-dim); margin: 0; }
+.progress-eta { font-size: 11.5px; color: var(--text-dim); margin: 0; flex-shrink: 0; white-space: nowrap; }
+.progress-size { font-size: 10.5px; color: var(--text-dim); opacity: .75; margin: 2px 0 0; }
+/* Nur aktiv, wenn der Titel per JS als zu lang erkannt wurde (scrollWidth >
+   clientWidth). Laeuft EINMAL bis zum letzten Wort durch und bleibt dort
+   stehen (animation-fill-mode: forwards, kein infinite) - --marquee-distance
+   wird per JS exakt auf die tatsaechliche Ueberlaenge in Pixeln gesetzt.
+   Vorherige Version nutzte translateX(-100%), was sich auf die Breite des
+   Elements SELBST bezieht (inkl. eines 100%-Paddings) statt auf den
+   sichtbaren Container - dadurch gab es eine Phase, in der weder Padding
+   noch Text sichtbar war (kompletter Leerlauf). */
+.progress-post-title.marquee span {
+  animation: pa-title-marquee var(--marquee-duration, 6s) ease-in-out 1 forwards;
+}
+@keyframes pa-title-marquee {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(var(--marquee-distance, 0px)); }
+}
+
+/* Cloud-Link wird im Hintergrund vorab groessen-gescannt, bevor die eigentliche
+   Datenuebertragung beginnt - Balken komplett (grau) gefuellt, mit der bereits
+   vorhandenen Wave-Animation darueber, statt bei 0% "eingefroren" zu wirken. */
+.progress-fill-file.scanning {
+  width: 100% !important;
+  background: #3a3a42;
+}
+/* Mindestens ein Item wartet noch auf seine echte Groesse (Cloud-Scan) - die
+   angezeigte Gesamtgroesse ist dann nur geschaetzt. Dezenter Grauschleier ueber
+   der Akzentfarbe, damit man sieht "arbeitet, Zahlen noch nicht belastbar".
+   Bewusst KEIN !important: der gruene done-flash / rote error-Puls muss weiter
+   gewinnen koennen. */
+.progress-fill.sizing {
+  background-image: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.35) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 1.6s infinite linear;
+}
+/* Primary-Bar: kurzer gruener Puls bei Gesamt-Abschluss, rot bei Fehler bei
+   einem Einzel-Item. NUR die Primary-Bar bekommt diese Farben, die Sekundaer-
+   Bar bleibt beim normalen Akzent-/Scanning-Grau. */
+.progress-fill.done-flash {
+  background: var(--green) !important;
+  transition: background .35s ease;
+}
+.progress-fill.error {
+  background: #ff1744 !important;
+  box-shadow: 0 0 10px rgba(255, 23, 68, 0.7);
+}
+/* Orange/gelb, sobald der Nutzer den Abbruch bestaetigt hat. */
+.progress-fill.cancelling {
+  background: var(--warn) !important;
+}
+/* minimized: only header (label + expand) visible */
+.progress-panel.minimized .progress-body { display: none; }
+.progress-panel.minimized .progress-header { margin-bottom: 0; }
+.progress-panel.minimized .progress-box { width: 240px; padding: 12px 14px; }
+
+/* Custom In-Panel Confirm Modal for Cancel Download */
+#progressConfirmModal {
+  position: absolute;
+  inset: 0;
+  background: rgba(23, 23, 28, 0.96);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border: 1px solid var(--border);
+}
+#progressConfirmModal p {
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0 0 14px 0;
+  line-height: 1.4;
+}
+#progressConfirmModal .pa-modal-btns {
+  display: flex;
+  gap: 10px;
+}
+#progressConfirmModal button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#progressConfirmModal .pa-btn-yes {
+  background: #ff4d4d;
+  color: #fff;
+  border: none;
+}
+#progressConfirmModal .pa-btn-yes:hover {
+  background: #ff3333;
+}
+#progressConfirmModal .pa-btn-no {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+#progressConfirmModal .pa-btn-no:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+/* Ecke-Zusammenfassung zeigt nur noch das Gesamt-Aggregat (Variante 3 des
+   Umbaus) - das Detail der "aktuellen" Einzeldatei lebt jetzt inline in der
+   jeweiligen Zeile im Dashboard selbst. Element bleibt im DOM (JS schreibt
+   weiterhin harmlos hinein), wird aber nicht mehr angezeigt. */
+#progressFileRow { display: none !important; }
+
+/* Per-file progress row */
+.progress-file-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.progress-file-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 16px;
+}
+.progress-file-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.progress-file-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg);
+  flex-shrink: 0;
+}
+.progress-track-file {
+  height: 6px;
+  width: 100%;
+  border-radius: 3px;
+  background: #1e1e26;
+  overflow: hidden;
+}
+.progress-fill-file {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  width: 0%;
+  transition: width .25s ease-out;
+  border-radius: 3px;
+}
+.progress-fill-file.trickle {
+  background: linear-gradient(90deg, #6b7280 0%, #9ca3af 50%, #6b7280 100%);
+  background-size: 200% 100%;
+  animation: progress-shimmer 1.6s linear infinite;
+}
+.progress-file-pct {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 28px;
+  text-align: right;
+}
+
+
+/* ---- Settings toggle switches ---- */
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 0; cursor: pointer;
+}
+.switch-row span:first-child { font-size: 13px; color: var(--text); }
+.switch {
+  position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute; cursor: pointer; inset: 0; background: #3a3a41; border-radius: 22px;
+  transition: background .18s;
+}
+.switch .slider::before {
+  content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%; transition: transform .18s;
+}
+.switch input:checked + .slider { background: var(--accent); }
+.switch input:checked + .slider::before { transform: translateX(18px); }
+.modal-section input[type="number"] {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 9px 12px; color: var(--text); font-size: 13px; outline: none;
+}
+.modal-section input[type="number"]:focus { border-color: var(--accent); }
+
+/* Custom Modern Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3e3e4a;
+}
+::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
+/* Custom Select Dropdowns */
+.custom-select-ui {
+  position: relative;
+  display: inline-block;
+  min-width: 140px;
+  user-select: none;
+}
+/* For settings modal, make it full-width */
+.modal-section .custom-select-ui {
+  width: 100%;
+}
+.custom-select-trigger {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s ease;
+  height: 38px;
+}
+.custom-select-ui:hover .custom-select-trigger {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.custom-select-ui.open .custom-select-trigger {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.custom-select-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-dim);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.custom-select-ui:hover .custom-select-chevron,
+.custom-select-ui.open .custom-select-chevron {
+  color: var(--accent);
+}
+.custom-select-ui.open .custom-select-chevron {
+  transform: rotate(180deg);
+}
+.custom-select-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Custom Select Options List */
+.custom-select-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: rgba(24, 24, 29, 0.78);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), var(--glass-sheen);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  padding: 6px;
+  animation: dropdownFadeIn 0.15s var(--ease);
+}
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.custom-select-ui.open .custom-select-options {
+  display: flex;
+}
+.custom-select-option {
+  padding: 8px 12px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.custom-select-option:hover {
+  background: var(--bg-card);
+  color: var(--text);
+}
+.custom-select-option.selected {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Update Banner styles */
+.update-banner-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(30, 30, 36, 0.5);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 12px 18px;
+  box-shadow: var(--shadow-xs), var(--glass-sheen);
+  transition: all 0.25s var(--ease);
+  animation: csFadeIn 0.2s ease-out;
+}
+.update-banner.bridge-update {
+  border-left: 4px solid var(--warn);
+}
+.update-banner.extension-update {
+  border-left: 4px solid var(--green);
+}
+.update-banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.update-banner-content {
+  flex: 1;
+}
+.update-banner-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 0 0 2px 0;
+}
+.update-banner-desc {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.4;
+}
+.update-banner-buttons {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.update-banner-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 11.5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+.update-banner-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+.update-banner-btn.action-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.update-banner-btn.action-btn:hover {
+  background: #ff7a62;
+  box-shadow: 0 2px 6px rgba(255, 90, 60, 0.25);
+}
+
+/* What's New Modal styling & Glassmorphic elements
+   (die frueher hier doppelt definierte .modal-overlay-Regel wurde entfernt -
+   die einzige, massgebliche Definition lebt jetzt oben bei "Settings modal"
+   und nutzt dieselben Glass-Tokens wie alle anderen Panels.) */
+.modal-overlay {
+  transition: all 0.3s ease;
+}
+
+.whats-new-modal {
+  max-width: 480px;
+  background: rgba(22, 22, 27, 0.7) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-lg), var(--glass-sheen) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: 24px !important;
+}
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.whats-new-modal .modal-header h3 {
+  font-size: 20px;
+  background: linear-gradient(90deg, #ff5a3c, #ff9f43, #ff5a3c);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  animation: gradient-flow 3s ease infinite;
+}
+
+/* Remove spin arrows from number input fields */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.whats-new-modal .modal-close {
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.whats-new-modal .modal-close:hover {
+  color: var(--text);
+}
+
+.whats-new-modal ul li {
+  margin-bottom: 10px;
+  position: relative;
+  list-style-type: none;
+}
+.whats-new-modal ul li::before {
+  content: "•";
+  color: var(--accent);
+  font-weight: bold;
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+}
+
+/* Update Animations */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.rotating-gear {
+  animation: spin-slow 4s linear infinite;
+  color: var(--warn);
+  flex-shrink: 0;
+  transform-origin: center;
+}
+
+.update-banner.extension-update .update-banner-icon {
+  display: inline-block;
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+/* Minimalist Vertical Quick-Jump Floating Widget (Frosted Glass Pill) */
+.quick-jump-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(18, 20, 28, 0.76);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  padding: 5px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: bottom 0.25s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+.quick-jump-widget.has-progress-panel {
+  bottom: 215px; /* Shift up above active download progress card */
+}
+.quick-jump-widget.has-progress-panel.minimized {
+  bottom: 75px; /* Shift above minimized progress bar */
+}
+.quick-jump-widget .qj-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  padding: 0;
+}
+.quick-jump-widget .qj-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.quick-jump-widget .qj-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(255, 107, 107, 0.5);
+  transform: scale(1.06);
+}
+.quick-jump-widget .qj-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  background: transparent;
+  border-color: transparent;
+}
+@keyframes jumpCardGlowHighlight {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7); border-color: rgba(255, 107, 107, 0.8); }
+  50% { box-shadow: 0 0 24px 6px rgba(255, 107, 107, 0.5); border-color: rgba(255, 107, 107, 0.9); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+}
+.jump-card-highlight {
+  animation: jumpCardGlowHighlight 1.6s ease-out;
+}
+
+/* Cloud Hosters Grid & Badges in Help Modal */
+.cloud-hosts-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0 16px;
+  flex-wrap: wrap;
+}
+.cloud-host-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  color: var(--text-dim);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  box-sizing: border-box;
+  padding: 0;
+}
+.cloud-host-badge svg {
+  display: block;
+  margin: auto;
+  flex-shrink: 0;
+  transition: all 0.22s ease;
+}
+.cloud-host-badge:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(255, 107, 107, 0.12);
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.35);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Google Drive custom colors matching the design system */
+.cloud-host-badge[data-tooltip="Google Drive"] path {
+  transition: fill 0.22s ease;
+}
+.cloud-host-badge[data-tooltip="Google Drive"] path:nth-child(1) {
+  fill: #ffffff;
+}
+.cloud-host-badge[data-tooltip="Google Drive"] path:nth-child(2) {
+  fill: #c2c2c9;
+}
+.cloud-host-badge[data-tooltip="Google Drive"] path:nth-child(3) {
+  fill: #85858d;
+}
+.cloud-host-badge[data-tooltip="Google Drive"]:hover path:nth-child(1) {
+  fill: #ff8870;
+}
+.cloud-host-badge[data-tooltip="Google Drive"]:hover path:nth-child(2) {
+  fill: var(--accent);
+}
+.cloud-host-badge[data-tooltip="Google Drive"]:hover path:nth-child(3) {
+  fill: #c43b23;
+}
+#cloudTooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  background: var(--bg-elevated, #1a1c27);
+  color: var(--text, #e8eaf6);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.cloud-notice-box {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: rgba(245, 166, 35, 0.08);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+.cloud-notice-box .notice-icon {
+  color: var(--warn);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.cloud-notice-box .notice-text {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.cloud-notice-box .notice-text strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+}
+.cloud-notice-box code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+/* Interactive Onboarding Tour Overlay & Popover */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.tour-highlight {
+  position: absolute;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65), 0 0 25px rgba(255, 90, 60, 0.6);
+  border: 2px solid var(--accent);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  animation: tourPulse 2s infinite ease-in-out;
+}
+
+@keyframes tourPulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65), 0 0 20px rgba(255, 90, 60, 0.45); }
+  50% { box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65), 0 0 35px rgba(255, 90, 60, 0.8); }
+}
+
+.tour-popover {
+  position: fixed;
+  width: 320px;
+  background: rgba(22, 22, 26, 0.95);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  padding: 18px 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 90, 60, 0.2);
+  z-index: 100000;
+  pointer-events: auto;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: tourPopoverFade 0.25s ease-out;
+}
+
+@keyframes tourPopoverFade {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.tour-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.tour-step-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.tour-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+.tour-close-btn:hover { color: var(--text); }
+
+.tour-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px 0;
+}
+
+.tour-text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin: 0 0 18px 0;
+}
+
+.tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.tour-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.2s ease;
+}
+
+.tour-dot.active {
+  background: var(--accent);
+  width: 14px;
+  border-radius: 4px;
+}
+
+/* Hover States for Tour Buttons */
+#replayTourBtn {
+  transition: all 0.2s ease;
+}
+#replayTourBtn:hover:not(:disabled) {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 4px 12px rgba(255, 90, 60, 0.2);
+}
+
+#startTourBtn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#startTourBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 90, 60, 0.35);
+}
+
+

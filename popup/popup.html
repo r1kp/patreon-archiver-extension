@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patreon Archiv-Manager</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><img src="../icons/icon128.png" alt="" /></div>
+      <div>
+        <h1 id="appTitle">Patreon Archiv-Manager</h1>
+        <p class="sub" id="sidebarSub">Deine gescannten Profile</p>
+      </div>
+    </header>
+
+    <div class="toggle-row">
+      <span id="toggleLabel">Aktiv auf Patreon</span>
+      <label class="switch">
+        <input type="checkbox" id="enabledToggle" checked />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div id="stats" class="stats">
+      <div class="stat"><span id="creatorCount">0</span><label id="creatorLabel">Profile</label></div>
+      <div class="stat"><span id="postCount">0</span><label id="postLabel">Beiträge</label></div>
+      <div class="stat"><span id="fileCount">0</span><label id="fileLabel">Dateien</label></div>
+    </div>
+
+    <div id="hint" class="hint"></div>
+
+    <div id="updateWarning" class="update-warning">
+      <span id="updateWarningText">Bridge-Update verfügbar!</span>
+      <a href="#" id="updateWarningLink" style="color: #ff9f43; text-decoration: none; font-weight: 600; font-size: 11px;">Details</a>
+    </div>
+
+    <button id="openDashboard" class="primary"></button>
+  </div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

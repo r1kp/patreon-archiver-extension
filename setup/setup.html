@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patreon Archiver · Setup</title>
+  <style>
+    :root {
+      --bg: #0d0d11;
+      --card: #17171d;
+      --card2: #1e1e26;
+      --border: #2a2a33;
+      --text: #f2f2f4;
+      --dim: #9a9aa4;
+      --accent: #ff5a3c;
+      --green: #38c172;
+      --warn: #ffb454;
+
+      /* Design-Ueberarbeitung: gleiche Radius-/Schatten-/Glass-Skala wie
+         dashboard.css/popup.css, damit alle drei Oberflaechen einheitlich
+         wirken. */
+      --radius-sm: 8px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --glass-bg: rgba(23, 23, 29, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.07);
+      --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, #23232c 0%, transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, rgba(255, 90, 60, 0.06) 0%, transparent 55%),
+        var(--bg);
+      background-attachment: fixed;
+      color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh; padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    .hero { text-align: center; margin-bottom: 36px; }
+    .hero .logo { width: 72px; height: 72px; border-radius: var(--radius-xl); margin: 0 auto 16px; display: block; box-shadow: 0 10px 30px rgba(255,90,60,.3); }
+    .hero h1 { font-size: 28px; margin: 0 0 8px; font-weight: 700; letter-spacing: -0.01em; }
+    .hero p { color: var(--dim); font-size: 15px; margin: 0; line-height: 1.6; }
+
+    .status-banner {
+      display: flex; align-items: center; gap: 14px; background: var(--glass-bg); border: 1px solid var(--glass-border);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+    .status-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; background: var(--dim); transition: background .2s var(--ease); }
+    .status-dot.ok { background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.bad { background: var(--accent); }
+    .status-text b { display: block; font-size: 15px; margin-bottom: 2px; font-weight: 700; }
+    .status-text span { font-size: 13px; color: var(--dim); }
+
+    .lang-toggle { position: absolute; top: 20px; right: 20px; }
+    .lang-toggle button {
+      background: var(--card); border: 1px solid var(--border); color: var(--dim); border-radius: var(--radius-sm);
+      padding: 6px 12px; font-size: 12px; cursor: pointer; margin-left: 6px;
+    }
+    .lang-toggle button.active { color: var(--text); border-color: var(--accent); }
+
+    .step {
+      background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      padding: 24px 26px; margin-bottom: 18px; position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s var(--ease);
+    }
+    .step:hover {
+      border-color: #3e3e4a;
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .step-num {
+      position: absolute; top: -14px; left: 24px; width: 30px; height: 30px; border-radius: 50%;
+      background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(255, 90, 60, 0.35);
+    }
+    .step h2 { font-size: 17px; margin: 6px 0 12px; font-weight: 700; letter-spacing: -0.005em; }
+    .step p { color: var(--dim); font-size: 14px; line-height: 1.7; margin: 0 0 14px; }
+    .step p:last-child { margin-bottom: 0; }
+
+    .cmd {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: rgba(10, 10, 13, 0.7); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px;
+      font-family: "SF Mono", Consolas, monospace; font-size: 13px; margin: 10px 0;
+    }
+    .cmd code { color: #e0e0e6; user-select: all; }
+    .cmd button {
+      background: var(--card2); border: 1px solid var(--border); color: var(--dim); border-radius: var(--radius-sm);
+      padding: 5px 11px; font-size: 11.5px; cursor: pointer; flex-shrink: 0;
+    }
+    .cmd button:hover { color: var(--text); border-color: var(--accent); }
+
+    .btn-primary {
+      background: var(--accent); color: #fff; border: none; border-radius: var(--radius-md); padding: 12px 20px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s var(--ease);
+    }
+    .btn-primary:hover {
+      background: #ff7a62;
+      box-shadow: 0 4px 12px rgba(255, 90, 60, 0.25);
+    }
+    .btn-outline {
+      background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius-md);
+      padding: 11px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s var(--ease);
+    }
+    .btn-outline:hover {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(255, 90, 60, 0.2);
+    }
+    .os-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .os-tab {
+      background: var(--card2); border: 1px solid var(--border); color: var(--dim); border-radius: var(--radius-sm);
+      padding: 7px 14px; font-size: 12.5px; cursor: pointer;
+    }
+    .os-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .os-panel { display: none; }
+    .os-panel.active { display: block; }
+    .note { font-size: 12.5px; color: var(--dim); background: var(--card2); border-radius: var(--radius-sm); padding: 10px 12px; line-height: 1.6; }
+    .done-check { color: var(--green); font-weight: 600; }
+    a { color: #8ab4ff; }
+
+    /* Connection Visualization Indicator */
+    .connection-viz {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0 auto 24px auto;
+      max-width: 480px;
+      width: 100%;
+    }
+    .viz-node {
+      width: 58px;
+      height: 58px;
+      border-radius: var(--radius-lg);
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 2.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s var(--ease);
+      position: relative;
+    }
+    .viz-node.extension-node {
+      box-shadow: 0 8px 24px rgba(255, 90, 60, 0.15);
+      border-color: var(--accent);
+      padding: 6px;
+      flex-shrink: 0;
+    }
+    .viz-node.extension-node img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .viz-node.middle-bridge-node {
+      padding: 0;
+      background: transparent;
+      border: none;
+      flex-shrink: 0;
+    }
+    .connection-viz.status-ok .viz-node.middle-bridge-node {
+      border: none;
+      box-shadow: none;
+    }
+    .connection-viz.status-warn .viz-node.middle-bridge-node {
+      border: none;
+      box-shadow: none;
+    }
+    .connection-viz.status-bad .viz-node.middle-bridge-node {
+      border: none;
+      box-shadow: none;
+    }
+    
+    .viz-node.bridge-node {
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+    .connection-viz.status-ok .viz-node.bridge-node {
+      border-color: var(--green);
+      color: var(--green);
+      box-shadow: 0 8px 24px rgba(56, 193, 114, 0.25);
+    }
+    .connection-viz.status-warn .viz-node.bridge-node {
+      border-color: var(--warn);
+      color: var(--warn);
+      box-shadow: 0 8px 24px rgba(255, 180, 84, 0.25);
+    }
+    .connection-viz.status-bad .viz-node.bridge-node {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 8px 24px rgba(255, 90, 60, 0.25);
+    }
+
+    .viz-check {
+      position: absolute;
+      right: -8px;
+      bottom: -8px;
+      transform: scale(0);
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(56, 193, 114, 0.4);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 5;
+    }
+    .connection-viz.status-ok .viz-check {
+      transform: scale(1);
+    }
+
+    .viz-line-container {
+      flex: 1;
+      height: 4px;
+      position: relative;
+      overflow: hidden;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .viz-line {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: background 0.3s ease;
+    }
+    .connection-viz.status-ok .viz-line {
+      background: rgba(56, 193, 114, 0.2);
+    }
+    .connection-viz.status-warn .viz-line {
+      background: rgba(255, 180, 84, 0.2);
+    }
+    .connection-viz.status-bad .viz-line {
+      background: rgba(255, 90, 60, 0.2);
+    }
+
+    /* Clean Fading Pulse Animation */
+    .viz-pulse {
+      position: absolute;
+      top: 0;
+      left: -60px;
+      width: 50px;
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(to right, rgba(154, 154, 164, 0) 0%, rgba(154, 154, 164, 0.7) 100%);
+    }
+    .viz-pulse.segment-1 {
+      animation: vizPulse1 5.4s infinite linear;
+    }
+    .viz-pulse.segment-2 {
+      animation: vizPulse2 5.4s infinite linear;
+    }
+    .connection-viz.status-ok .viz-pulse.segment-1 {
+      background: linear-gradient(to right, rgba(56, 193, 114, 0) 0%, rgba(56, 193, 114, 0.8) 100%);
+      animation: vizPulse1 3.6s infinite linear;
+    }
+    .connection-viz.status-ok .viz-pulse.segment-2 {
+      background: linear-gradient(to right, rgba(56, 193, 114, 0) 0%, rgba(56, 193, 114, 0.8) 100%);
+      animation: vizPulse2 3.6s infinite linear;
+    }
+    .connection-viz.status-warn .viz-pulse.segment-1 {
+      background: linear-gradient(to right, rgba(255, 180, 84, 0) 0%, rgba(255, 180, 84, 0.8) 100%);
+      animation: vizPulse1 4.2s infinite linear;
+    }
+    .connection-viz.status-warn .viz-pulse.segment-2 {
+      background: linear-gradient(to right, rgba(255, 180, 84, 0) 0%, rgba(255, 180, 84, 0.8) 100%);
+      animation: vizPulse2 4.2s infinite linear;
+    }
+    .connection-viz.status-bad .viz-pulse.segment-1 {
+      background: linear-gradient(to right, rgba(255, 90, 60, 0) 0%, rgba(255, 90, 60, 0.8) 100%);
+      animation: vizPulse1 5.4s infinite linear;
+    }
+    .connection-viz.status-bad .viz-pulse.segment-2 {
+      background: linear-gradient(to right, rgba(255, 90, 60, 0) 0%, rgba(255, 90, 60, 0.8) 100%);
+      animation: vizPulse2 5.4s infinite linear;
+    }
+
+    @keyframes vizPulse1 {
+      0% { left: -60px; }
+      25% { left: 110%; }
+      100% { left: 110%; }
+    }
+    @keyframes vizPulse2 {
+      0% { left: -60px; }
+      25% { left: -60px; }
+      50% { left: 110%; }
+      100% { left: 110%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="connection-viz status-bad" id="connectionViz">
+        <div class="viz-node extension-node" title="Extension">
+          <img src="../icons/icon128.png" alt="Extension" />
+        </div>
+        
+        <div class="viz-line-container">
+          <div class="viz-line">
+            <div class="viz-pulse segment-1"></div>
+          </div>
+        </div>
+        
+        <div class="viz-node middle-bridge-node" title="Bridge Software">
+          <img src="../icons/bridge_logo.png" alt="Bridge Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 12px;" />
+          <div class="viz-check">
+            <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+        
+        <div class="viz-line-container">
+          <div class="viz-line">
+            <div class="viz-pulse segment-2"></div>
+          </div>
+        </div>
+        
+        <div class="viz-node bridge-node" title="Local PC">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+      </div>
+      <h1 data-i18n="heroTitle">Set up video downloads</h1>
+      <p data-i18n="heroSub">A quick one-time setup lets the extension download external videos (YouTube/Vimeo) and save to any folder.</p>
+    </div>
+
+    <div class="status-banner">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text">
+        <b id="statusTitle">Checking...</b>
+        <span id="statusDetail"></span>
+      </div>
+      <button class="btn-outline" id="recheckBtn" style="margin-left:auto;" data-i18n="recheck">Re-check</button>
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <h2 data-i18n="step1Title">Download the installer</h2>
+      <p data-i18n="step1Text">Click the button below to download the setup executable. Save it somewhere convenient.</p>
+      <button class="btn-primary" id="dlBridgeBtn" data-i18n="step2Btn">Download bridge installer (.exe)</button>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <h2 data-i18n="step2Title">Run the installer</h2>
+      <p data-i18n="step2Text">Double-click "PatreonArchiverBridge_Setup.exe". A wizard opens; select the installation path and click "Install". Optionally check "Download yt-dlp" to get the video engine. Then fully restart Chrome (close all windows).</p>
+      <p class="note" style="margin-top:14px;" data-i18n="step2Note">Note: If Windows Defender SmartScreen appears, click "More info" and then "Run anyway" to proceed.</p>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <h2 data-i18n="step3Title">Done!</h2>
+      <p data-i18n="step3Text">Once the status banner at the top turns green, everything works automatically. Choose a download folder in Settings, then click "Download" on any post.</p>
+      <button class="btn-outline" id="backBtn" data-i18n="step3Btn">Back to dashboard</button>
+    </div>
+  </div>
+
+  <script type="module" src="setup.js"></script>
+</body>
+</html>

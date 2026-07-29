@@ -1,0 +1,20 @@
+# Bridge installer binaries — these belong to the separate PatreonArchiverBridge
+# repo and its own GitHub Releases, not to this extension's source repo.
+*.exe
+
+# Local dev/test helper: contains personal, real cloud-storage share links used
+# for manual testing, not meant to be published (see file header comment).
+dev/
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

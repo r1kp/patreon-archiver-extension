@@ -1053,10 +1053,115 @@ async function refreshActivePosts(resetStatus = false) {
 
   el("creatorAvatar").src = creator.avatarUrl || "../icons/icon128.png";
   el("creatorName").textContent = creator.name;
+  
+  const creatorLinkEl = el("creatorPatreonLink");
+  if (creatorLinkEl) {
+    const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+    creatorLinkEl.href = creatorUrl;
+  }
+
+  updateMembershipBadge(creator);
+
   const fileTotal = state.posts.reduce((sum, p) => sum + (p.files?.length || 0), 0);
   el("creatorMeta").textContent = L("postsAndFiles", state.posts.length, fileTotal);
 
   renderPostList();
+}
+
+function updateMembershipBadge(creator) {
+  const badgeBtn = el("membershipBadgeBtn");
+  if (!badgeBtn) return;
+  const m = creator?.membership;
+  if (!m) {
+    badgeBtn.style.display = "none";
+    return;
+  }
+
+  badgeBtn.style.display = "inline-flex";
+  const now = Date.now();
+  const nextCharge = m.nextChargeDate ? new Date(m.nextChargeDate).getTime() : null;
+  const isExpired = m.isMember === false || (nextCharge && nextCharge < now && m.patronStatus !== "active_patron");
+
+  badgeBtn.className = "membership-badge-btn " + (isExpired ? "expired" : (m.isMember ? "active" : "free"));
+  
+  if (isExpired) {
+    badgeBtn.innerHTML = `<span>🔒</span><span>${escapeHtml(m.tierName || "Membership")} (Expired)</span>`;
+  } else if (m.isMember) {
+    const renewStr = m.nextChargeDate ? ` · Renews ${new Date(m.nextChargeDate).toLocaleDateString()}` : "";
+    badgeBtn.innerHTML = `<span>🎖️</span><span>${escapeHtml(m.tierName || "Active Supporter")}${renewStr}</span>`;
+  } else {
+    badgeBtn.innerHTML = `<span>👥</span><span>Free Follower</span>`;
+  }
+
+  badgeBtn.onclick = (e) => {
+    e.stopPropagation();
+    showMembershipModal(creator);
+  };
+}
+
+function showMembershipModal(creator) {
+  const modal = el("membershipModal");
+  const content = el("membershipModalContent");
+  const patreonLink = el("membershipPatreonLink");
+  if (!modal || !content) return;
+
+  const m = creator?.membership || {};
+  const now = Date.now();
+  const nextCharge = m.nextChargeDate ? new Date(m.nextChargeDate).getTime() : null;
+  const isExpired = m.isMember === false || (nextCharge && nextCharge < now && m.patronStatus !== "active_patron");
+  const amountStr = m.entitledCents > 0 ? `$${(m.entitledCents / 100).toFixed(2)}/mo` : "Free";
+
+  const rows = [];
+  rows.push(`
+    <div class="membership-info-row">
+      <span class="membership-info-label">Status</span>
+      <span class="membership-info-val" style="color: ${isExpired ? '#e74c3c' : (m.isMember ? '#38c172' : 'var(--text)')}">
+        ${isExpired ? '🔒 Expired / Inactive' : (m.isMember ? '✅ Active Member' : 'Free Follower')}
+      </span>
+    </div>
+  `);
+
+  if (m.tierName) {
+    rows.push(`
+      <div class="membership-info-row">
+        <span class="membership-info-label">Tier / Level</span>
+        <span class="membership-info-val">${escapeHtml(m.tierName)} (${amountStr})</span>
+      </div>
+    `);
+  }
+
+  if (m.nextChargeDate) {
+    rows.push(`
+      <div class="membership-info-row">
+        <span class="membership-info-label">${isExpired ? 'Access Ended' : 'Next Billing / Renews'}</span>
+        <span class="membership-info-val">${new Date(m.nextChargeDate).toLocaleDateString()}</span>
+      </div>
+    `);
+  }
+
+  if (m.checkedAt) {
+    rows.push(`
+      <div class="membership-info-row">
+        <span class="membership-info-label">Last Synced</span>
+        <span class="membership-info-val">${new Date(m.checkedAt).toLocaleDateString()} ${new Date(m.checkedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+      </div>
+    `);
+  }
+
+  if (isExpired) {
+    rows.push(`
+      <div class="membership-warning-box">
+        <strong>⚠️ Membership expired:</strong> Patron-only media links from previous scans may be locked by Patreon. To download newly unlocked content, please renew on Patreon and perform a fresh scan.
+      </div>
+    `);
+  }
+
+  content.innerHTML = rows.join("");
+  if (patreonLink) {
+    patreonLink.href = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+  }
+
+  modal.style.display = "flex";
 }
 
 // ---------- Filter/Sortierung ----------
@@ -4190,7 +4295,16 @@ async function init() {
   // Dashboard-Öffnen zusätzlich noch "yt-dlp --version" auszuführen - das
   // hat spürbar zur Verzögerung beigetragen. Ein voller Versions-Recheck
   // passiert weiterhin regelmäßig über den 60s-Intervall-Timer.
-  refreshBridgeReady(false);
+  // Membership modal listeners
+  el("membershipModalClose")?.addEventListener("click", () => {
+    el("membershipModal").style.display = "none";
+  });
+  el("membershipModalDone")?.addEventListener("click", () => {
+    el("membershipModal").style.display = "none";
+  });
+  el("membershipModal")?.addEventListener("click", (e) => {
+    if (e.target === el("membershipModal")) el("membershipModal").style.display = "none";
+  });
 
   startPeriodicTasks();
 }

@@ -676,14 +676,24 @@ body {
 }
 
 /* Centered Expired Lockout Overlay */
+.creator-body-wrap {
+  position: relative;
+  min-height: calc(100vh - 180px);
+}
+
+.content.membership-expired-lock,
+.content:has(.creator-view.membership-expired) {
+  overflow-y: hidden !important;
+}
+
 .creator-expired-overlay {
   position: absolute;
   inset: 0;
   z-index: 60;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 40px;
+  padding: 20px;
   pointer-events: auto;
   animation: modalScaleIn 0.22s var(--ease);
 }

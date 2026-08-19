@@ -883,34 +883,75 @@
     return result;
   }
 
-  // ---------- Hauptablauf ----------
+  function extractCreatorVanityFromUrl() {
+    const p = location.pathname;
+    const matchCw = p.match(/^\/cw\/([^/]+)/i);
+    if (matchCw) return matchCw[1];
+    const matchC = p.match(/^\/(?:c|m)\/([^/]+)/i);
+    if (matchC) return matchC[1];
+    const matchDirect = p.match(/^\/([^/]+)/i);
+    if (matchDirect && !/^(explore|discover|home|search|login|signup|settings|checkout|payment|join|about|press|careers|privacy|terms|sitemap|user|posts|api)$/i.test(matchDirect[1])) {
+      return matchDirect[1];
+    }
+    return null;
+  }
 
   async function resolveCampaign() {
     const seedPostId = findAnyPostId();
-    if (!seedPostId) {
-      throw new Error(
-        lang === "en"
-          ? "Could not find any post on this page. Please scroll the creator's 'Posts' page until at least one post is visible, then try again."
-          : "Konnte keinen Post auf dieser Seite finden. Bitte auf der 'Beiträge'-Seite des Creators scrollen, bis mindestens ein Post sichtbar ist, und erneut versuchen."
-      );
+    if (seedPostId) {
+      try {
+        const url =
+          `${API_BASE}/posts/${seedPostId}` +
+          `?include=campaign` +
+          `&fields[campaign]=name,vanity,url,creation_name,avatar_photo_url,summary` +
+          `&fields[post]=url`;
+        const data = await fetchJson(url);
+        const included = buildIncludedMap(data.included);
+        const campaignEntry = [...included.values()].find((i) => i.type === "campaign");
+        if (campaignEntry) {
+          const a = campaignEntry.attributes || {};
+          return {
+            id: campaignEntry.id,
+            name: a.name || a.creation_name || a.vanity || `Creator ${campaignEntry.id}`,
+            vanity: a.vanity || null,
+            url: a.url || location.origin,
+            avatarUrl: a.avatar_photo_url || null,
+          };
+        }
+      } catch (err) {
+        console.warn("[PatreonArchiver] Post seed lookup failed, trying vanity fallback:", err.message);
+      }
     }
-    const url =
-      `${API_BASE}/posts/${seedPostId}` +
-      `?include=campaign` +
-      `&fields[campaign]=name,vanity,url,creation_name,avatar_photo_url,summary` +
-      `&fields[post]=url`;
-    const data = await fetchJson(url);
-    const included = buildIncludedMap(data.included);
-    const campaignEntry = [...included.values()].find((i) => i.type === "campaign");
-    if (!campaignEntry) throw new Error("Konnte die Campaign-ID nicht aus der API-Antwort lesen (Struktur evtl. geändert).");
-    const a = campaignEntry.attributes || {};
-    return {
-      id: campaignEntry.id,
-      name: a.name || a.creation_name || a.vanity || `Creator ${campaignEntry.id}`,
-      vanity: a.vanity || null,
-      url: a.url || location.origin,
-      avatarUrl: a.avatar_photo_url || null,
-    };
+
+    const vanity = extractCreatorVanityFromUrl();
+    if (vanity) {
+      try {
+        const url =
+          `${API_BASE}/campaigns` +
+          `?filter[vanity]=${encodeURIComponent(vanity)}` +
+          `&fields[campaign]=name,vanity,url,creation_name,avatar_photo_url,summary`;
+        const data = await fetchJson(url);
+        const items = data.data ? (Array.isArray(data.data) ? data.data : [data.data]) : [];
+        if (items.length > 0 && items[0].attributes) {
+          const a = items[0].attributes;
+          return {
+            id: items[0].id,
+            name: a.name || a.creation_name || a.vanity || `Creator ${items[0].id}`,
+            vanity: a.vanity || vanity,
+            url: a.url || location.origin,
+            avatarUrl: a.avatar_photo_url || null,
+          };
+        }
+      } catch (err) {
+        console.warn("[PatreonArchiver] Vanity lookup failed:", err.message);
+      }
+    }
+
+    throw new Error(
+      lang === "en"
+        ? "Could not find any post on this page. Please scroll the creator's page until at least one post is visible, then try again."
+        : "Konnte keinen Post auf dieser Seite finden. Bitte auf der Creator-Seite scrollen und erneut versuchen."
+    );
   }
 
   // Holt die eigene Mitgliedschaft + die Tier-Liste der Kampagne.
@@ -1396,8 +1437,9 @@
         lastPath = location.pathname;
         maybeShowPanel();
         renderPanelContents(); // Resets panel buttons and scan state back to original setup
+        checkAutoScanTrigger();
       }
-    }, 1000);
+    }, 800);
     window.addEventListener("beforeunload", (e) => {
       if (scanning) {
         e.preventDefault();

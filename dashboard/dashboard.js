@@ -1082,7 +1082,14 @@ function updateMembershipBadge(creator) {
   if (!badgeBtn) return;
   const m = creator?.membership;
   if (!m) {
-    badgeBtn.style.display = "none";
+    badgeBtn.style.display = "inline-flex";
+    badgeBtn.className = "membership-badge-btn unknown";
+    badgeBtn.innerHTML = `${ICON_USER_OUTLINE}<span>Membership · Rescan needed</span>`;
+    badgeBtn.title = "Click for info · Rescan on Patreon to detect tier";
+    badgeBtn.onclick = (e) => {
+      e.stopPropagation();
+      showMembershipModal(creator);
+    };
     if (overlayEl) overlayEl.style.display = "none";
     if (creatorViewEl) creatorViewEl.classList.remove("membership-expired");
     if (contentEl) contentEl.classList.remove("membership-expired-lock");
@@ -1135,7 +1142,26 @@ function showMembershipModal(creator) {
   const patreonLink = el("membershipPatreonLink");
   if (!modal || !content) return;
 
-  const m = creator?.membership || {};
+  const m = creator?.membership;
+  if (!m) {
+    content.innerHTML = `
+      <div class="membership-info-row">
+        <span class="membership-info-label">Status</span>
+        <span class="membership-info-val" style="color: var(--text-dim); display: inline-flex; align-items: center; gap: 5px;">
+          ${ICON_USER_OUTLINE} Not yet scanned
+        </span>
+      </div>
+      <div class="membership-warning-box" style="background: rgba(255, 255, 255, 0.05); border-left-color: var(--text-dim); color: var(--text);">
+        <strong>Info:</strong> This creator was scanned before membership tracking was introduced. Please perform a fresh scan on Patreon to detect your active tier and renewal date.
+      </div>
+    `;
+    if (patreonLink) {
+      patreonLink.href = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+    }
+    modal.style.display = "flex";
+    return;
+  }
+
   const now = Date.now();
   const nextCharge = m.nextChargeDate ? new Date(m.nextChargeDate).getTime() : null;
   const isExpired = m.isMember === false || (nextCharge && nextCharge < now && m.patronStatus !== "active_patron");

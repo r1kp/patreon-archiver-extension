@@ -641,6 +641,16 @@ body {
   border-color: rgba(255, 255, 255, 0.12);
   color: var(--text-dim);
 }
+.membership-badge-btn.unknown {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-dim);
+}
+.membership-badge-btn.unknown:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text);
+}
 
 .membership-modal-details {
   display: flex;

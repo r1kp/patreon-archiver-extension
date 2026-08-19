@@ -1115,6 +1115,16 @@ function updateMembershipBadge(creator) {
       const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
       const rescanUrl = creatorUrl + (creatorUrl.includes("?") ? "&" : "?") + "pa_auto_scan=1";
       expiredPatreonBtn.href = rescanUrl;
+      expiredPatreonBtn.onclick = (e) => {
+        e.preventDefault();
+        chrome.storage.local.set({
+          autoScanTime: Date.now(),
+          autoScanTargetUrl: creatorUrl,
+          autoScanCreatorId: creator.id
+        }).finally(() => {
+          window.open(rescanUrl, "_blank");
+        });
+      };
     }
     if (expiredDetailsBtn) {
       expiredDetailsBtn.onclick = () => showMembershipModal(creator);

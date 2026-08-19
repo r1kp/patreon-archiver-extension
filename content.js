@@ -168,15 +168,17 @@
   }
 
   function renderPanelContents() {
+    if (!container || scanning) return;
     const panel = container.querySelector("#pa-panel");
+    if (!panel) return;
     const onCreator = isCreatorPage();
 
     if (!onCreator) {
-      // Not on a creator profile page – show a helpful info message.
+      // Nicht auf einem Creator-Profil - Info-Text anzeigen
       panel.innerHTML = `
         <span class="pa-close" id="pa-close-btn">✕</span>
         <h4><img class="pa-logo" src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" /> ${L("panelTitle")}</h4>
-        <div class="pa-status" id="pa-status" style="font-size:12px;line-height:1.6;text-align:left;padding:4px 0;">
+        <div style="font-size:13px;line-height:1.45;color:#ccc;margin-top:6px;">
           👋 Navigate to a creator's <b>posts page</b> on Patreon first, then click <b>Scan</b> to archive their content.
         </div>
         <div style="margin-top:10px;text-align:center;"><a class="pa-link" id="pa-open-dash" href="#">${L("panelOpenDashboard")}</a></div>
@@ -245,7 +247,7 @@
     const panel = container.querySelector("#pa-panel");
     const bubble = container.querySelector("#pa-bubble");
     if (next === "full") {
-      if (!panel.dataset.rendered) {
+      if (!panel.dataset.rendered || !panel.querySelector("#pa-scan-btn")) {
         renderPanelContents();
         panel.dataset.rendered = "1";
       }
@@ -1449,9 +1451,20 @@
   })();
 
   async function checkAutoScanTrigger() {
+    if (scanning) return;
+
+    let hasStorageTrigger = false;
+    try {
+      const data = await chrome.storage.local.get(["autoScanTime"]);
+      if (data.autoScanTime && Date.now() - data.autoScanTime < 60000) {
+        hasStorageTrigger = true;
+        await chrome.storage.local.remove(["autoScanTime", "autoScanTargetUrl", "autoScanCreatorId"]);
+      }
+    } catch (e) {}
+
     const url = window.location.href;
-    const isAutoScanUrl = url.includes("pa_auto_scan=1") || window.location.hash.includes("pa_auto_scan");
-    if (isAutoScanUrl) {
+    const isUrlTrigger = url.includes("pa_auto_scan=1") || window.location.hash.includes("pa_auto_scan");
+    if (isUrlTrigger) {
       try {
         sessionStorage.setItem("pa_auto_scan", "1");
         const cleanUrl = location.pathname + location.search.replace(/[?&]pa_auto_scan=1/, "").replace(/^&/, "?");
@@ -1459,28 +1472,32 @@
       } catch (e) {}
     }
 
-    if (isAutoScanUrl || sessionStorage.getItem("pa_auto_scan") === "1") {
-      console.log("[Patreon Archiver] Auto-scan trigger active!");
+    const hasSessionTrigger = sessionStorage.getItem("pa_auto_scan") === "1";
+
+    if (hasStorageTrigger || isUrlTrigger || hasSessionTrigger) {
+      console.log("[Patreon Archiver] Auto-scan trigger confirmed!");
+      sessionStorage.removeItem("pa_auto_scan");
+
+      // Force open panel so user sees it right away
       setPanelState("full");
+      setStatus("Auto-scan starting...", { indeterminate: true });
 
       let attempts = 0;
       const interval = setInterval(() => {
         attempts++;
         if (scanning) {
-          sessionStorage.removeItem("pa_auto_scan");
           clearInterval(interval);
           return;
         }
         if (!isSinglePostPage()) {
           const hasPosts = !!findAnyPostId();
-          if (hasPosts || attempts >= 4) {
-            sessionStorage.removeItem("pa_auto_scan");
+          const vanity = extractCreatorVanityFromUrl();
+          if (hasPosts || vanity || attempts >= 3) {
             clearInterval(interval);
-            console.log("[Patreon Archiver] Starting auto-scan now...");
+            console.log("[Patreon Archiver] Launching startScan() now!");
             startScan();
           }
         } else if (attempts >= 20) {
-          sessionStorage.removeItem("pa_auto_scan");
           clearInterval(interval);
         }
       }, 500);

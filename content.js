@@ -1384,6 +1384,7 @@
     extEnabled = paEnabled !== false; // Standard: an
     ensureContainer();
     maybeShowPanel();
+    checkAutoScanTrigger();
     let lastPath = location.pathname;
     setInterval(() => {
       if (location.pathname !== lastPath) {
@@ -1399,4 +1400,32 @@
       }
     });
   })();
+
+  async function checkAutoScanTrigger() {
+    const url = window.location.href;
+    if (url.includes("pa_auto_scan=1") || window.location.hash === "#pa_auto_scan") {
+      console.log("[Patreon Archiver] Auto-scan requested via URL parameter!");
+      setPanelState("full");
+      try {
+        const cleanUrl = location.pathname + location.search.replace(/[?&]pa_auto_scan=1/, "").replace(/^&/, "?");
+        history.replaceState(null, "", cleanUrl || location.pathname);
+      } catch (e) {}
+
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (scanning) {
+          clearInterval(interval);
+          return;
+        }
+        if (isCreatorPage() && !isSinglePostPage()) {
+          clearInterval(interval);
+          console.log("[Patreon Archiver] Starting auto-scan now...");
+          startScan();
+        } else if (attempts >= 10) {
+          clearInterval(interval);
+        }
+      }, 500);
+    }
+  }
 })();

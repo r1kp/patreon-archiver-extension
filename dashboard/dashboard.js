@@ -1099,7 +1099,9 @@ function updateMembershipBadge(creator) {
   badgeBtn.style.display = "inline-flex";
   const now = Date.now();
   const nextCharge = m.nextChargeDate ? new Date(m.nextChargeDate).getTime() : null;
-  const isExpired = m.isMember === false || (nextCharge && nextCharge < now && m.patronStatus !== "active_patron");
+  const isFormerPatron = m.patronStatus === "former_patron" || m.patronStatus === "declined_patron";
+  const hadPastSubscription = !!m.lastChargeDate || (!!m.nextChargeDate && nextCharge && nextCharge < now);
+  const isExpired = isFormerPatron || (hadPastSubscription && !m.isMember && m.patronStatus !== "active_patron");
 
   badgeBtn.className = "membership-badge-btn " + (isExpired ? "expired" : (m.isMember ? "active" : "free"));
   
@@ -1113,7 +1115,8 @@ function updateMembershipBadge(creator) {
     }
     if (expiredPatreonBtn) {
       const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
-      expiredPatreonBtn.href = creatorUrl;
+      const rescanUrl = creatorUrl + (creatorUrl.includes("?") ? "&" : "?") + "pa_auto_scan=1";
+      expiredPatreonBtn.href = rescanUrl;
     }
     if (expiredDetailsBtn) {
       expiredDetailsBtn.onclick = () => showMembershipModal(creator);
@@ -1156,7 +1159,8 @@ function showMembershipModal(creator) {
       </div>
     `;
     if (patreonLink) {
-      patreonLink.href = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+      const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+      patreonLink.href = creatorUrl + (creatorUrl.includes("?") ? "&" : "?") + "pa_auto_scan=1";
     }
     modal.style.display = "flex";
     return;
@@ -1164,7 +1168,9 @@ function showMembershipModal(creator) {
 
   const now = Date.now();
   const nextCharge = m.nextChargeDate ? new Date(m.nextChargeDate).getTime() : null;
-  const isExpired = m.isMember === false || (nextCharge && nextCharge < now && m.patronStatus !== "active_patron");
+  const isFormerPatron = m.patronStatus === "former_patron" || m.patronStatus === "declined_patron";
+  const hadPastSubscription = !!m.lastChargeDate || (!!m.nextChargeDate && nextCharge && nextCharge < now);
+  const isExpired = isFormerPatron || (hadPastSubscription && !m.isMember && m.patronStatus !== "active_patron");
   const amountStr = m.entitledCents > 0 ? `$${(m.entitledCents / 100).toFixed(2)}/mo` : "Free";
 
   const rows = [];

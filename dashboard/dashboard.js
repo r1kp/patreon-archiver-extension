@@ -4338,6 +4338,8 @@ async function init() {
   // Initialize custom dropdowns
   document.querySelectorAll("select").forEach(initCustomSelect);
 
+  window.__pa_state = state;
+  window.__pa_selectCreator = selectCreator;
   window.__pa_loadCreators = loadCreators;
   window.__pa_maybeShowOnboarding = maybeShowOnboarding;
   await loadCreators();

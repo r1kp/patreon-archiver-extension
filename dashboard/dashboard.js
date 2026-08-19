@@ -973,12 +973,10 @@ function renderCreatorList() {
       const isActive = String(c.id) === String(state.activeCreatorId);
       card.className = "creator-card" + (isActive ? " active" : "");
       if (isActive) activeCard = card;
-      const memberLine = formatMembershipLine(c.membership);
       card.innerHTML = `
         <img src="${c.avatarUrl || "../icons/icon48.png"}" alt="" />
         <div style="min-width:0;">
           <div class="cname">${escapeHtml(c.name)}</div>
-          ${memberLine ? `<div class="cmember">${memberLine}</div>` : ""}
           <div class="cmeta">${c.lastScanned ? L("scannedLabel") + " " + formatDate(new Date(c.lastScanned).toISOString()) : ""}</div>
         </div>
       `;
@@ -1171,7 +1169,18 @@ function showMembershipModal(creator) {
   const isFormerPatron = m.patronStatus === "former_patron" || m.patronStatus === "declined_patron";
   const hadPastSubscription = !!m.lastChargeDate || (!!m.nextChargeDate && nextCharge && nextCharge < now);
   const isExpired = isFormerPatron || (hadPastSubscription && !m.isMember && m.patronStatus !== "active_patron");
-  const amountStr = m.entitledCents > 0 ? `$${(m.entitledCents / 100).toFixed(2)}/mo` : "Free";
+  
+  const cur = (m.currency || "EUR").toUpperCase();
+  const symbol = cur === "EUR" ? "€" : (cur === "GBP" ? "£" : "$");
+  const numVal = (m.entitledCents || 0) / 100;
+  const isEuro = symbol === "€";
+  const formattedPrice = numVal.toLocaleString(state.lang === "de" ? "de-DE" : "en-US", {
+    minimumFractionDigits: numVal % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2
+  });
+  const amountStr = m.entitledCents > 0
+    ? (isEuro ? `${formattedPrice} €/Monat` : `${symbol}${formattedPrice}/mo`)
+    : "Free";
 
   const rows = [];
   rows.push(`

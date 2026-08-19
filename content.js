@@ -956,6 +956,7 @@
     const patronStatus = mAttr.patron_status || null; // z.B. "active_patron", "declined_patron", null
     const entitledCents = mAttr.currently_entitled_amount_cents ?? 0;
     const nextChargeDate = mAttr.next_charge_date || null;
+    const currency = mAttr.currency || data.data?.attributes?.currency || "EUR";
 
     const isPaying = patronStatus === "active_patron" && entitledCents > 0;
     if (!isPaying) {
@@ -964,6 +965,7 @@
         patronStatus: patronStatus || "none",
         tierName: null,
         entitledCents: 0,
+        currency,
         nextChargeDate,
         lastChargeDate: mAttr.last_charge_date || null,
         pledgeStart: mAttr.pledge_relationship_start || null,
@@ -989,6 +991,7 @@
       tierPosition: currentTier?.position || null,
       tiersTotal: tiers.length,
       entitledCents,
+      currency,
       nextChargeDate, // ab wann die Mitgliedschaft theoretisch neu geprüft werden sollte
       lastChargeDate: mAttr.last_charge_date || null,
       pledgeStart: mAttr.pledge_relationship_start || null,
@@ -1403,26 +1406,37 @@
 
   async function checkAutoScanTrigger() {
     const url = window.location.href;
-    if (url.includes("pa_auto_scan=1") || window.location.hash === "#pa_auto_scan") {
-      console.log("[Patreon Archiver] Auto-scan requested via URL parameter!");
-      setPanelState("full");
+    const isAutoScanUrl = url.includes("pa_auto_scan=1") || window.location.hash.includes("pa_auto_scan");
+    if (isAutoScanUrl) {
       try {
+        sessionStorage.setItem("pa_auto_scan", "1");
         const cleanUrl = location.pathname + location.search.replace(/[?&]pa_auto_scan=1/, "").replace(/^&/, "?");
         history.replaceState(null, "", cleanUrl || location.pathname);
       } catch (e) {}
+    }
+
+    if (isAutoScanUrl || sessionStorage.getItem("pa_auto_scan") === "1") {
+      console.log("[Patreon Archiver] Auto-scan trigger active!");
+      setPanelState("full");
 
       let attempts = 0;
       const interval = setInterval(() => {
         attempts++;
         if (scanning) {
+          sessionStorage.removeItem("pa_auto_scan");
           clearInterval(interval);
           return;
         }
         if (isCreatorPage() && !isSinglePostPage()) {
-          clearInterval(interval);
-          console.log("[Patreon Archiver] Starting auto-scan now...");
-          startScan();
-        } else if (attempts >= 10) {
+          const hasPosts = !!findAnyPostId();
+          if (hasPosts || attempts >= 5) {
+            sessionStorage.removeItem("pa_auto_scan");
+            clearInterval(interval);
+            console.log("[Patreon Archiver] Starting auto-scan now...");
+            startScan();
+          }
+        } else if (attempts >= 20) {
+          sessionStorage.removeItem("pa_auto_scan");
           clearInterval(interval);
         }
       }, 500);

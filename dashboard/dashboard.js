@@ -1068,12 +1068,21 @@ async function refreshActivePosts(resetStatus = false) {
   renderPostList();
 }
 
+const ICON_DIAMOND_OUTLINE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg>`;
+const ICON_LOCK_OUTLINE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+const ICON_USER_OUTLINE = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+
 function updateMembershipBadge(creator) {
   const badgeBtn = el("membershipBadgeBtn");
+  const bannerEl = el("creatorExpiredBanner");
+  const creatorViewEl = el("creatorView");
+  const expiredPatreonBtn = el("expiredBannerPatreonBtn");
   if (!badgeBtn) return;
   const m = creator?.membership;
   if (!m) {
     badgeBtn.style.display = "none";
+    if (bannerEl) bannerEl.style.display = "none";
+    if (creatorViewEl) creatorViewEl.classList.remove("membership-expired");
     return;
   }
 
@@ -1085,12 +1094,22 @@ function updateMembershipBadge(creator) {
   badgeBtn.className = "membership-badge-btn " + (isExpired ? "expired" : (m.isMember ? "active" : "free"));
   
   if (isExpired) {
-    badgeBtn.innerHTML = `<span>🔒</span><span>${escapeHtml(m.tierName || "Membership")} (Expired)</span>`;
-  } else if (m.isMember) {
-    const renewStr = m.nextChargeDate ? ` · Renews ${new Date(m.nextChargeDate).toLocaleDateString()}` : "";
-    badgeBtn.innerHTML = `<span>🎖️</span><span>${escapeHtml(m.tierName || "Active Supporter")}${renewStr}</span>`;
+    badgeBtn.innerHTML = `${ICON_LOCK_OUTLINE}<span>${escapeHtml(m.tierName || "Membership")} (Expired)</span>`;
+    if (bannerEl) bannerEl.style.display = "flex";
+    if (creatorViewEl) creatorViewEl.classList.add("membership-expired");
+    if (expiredPatreonBtn) {
+      const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
+      expiredPatreonBtn.href = creatorUrl;
+    }
   } else {
-    badgeBtn.innerHTML = `<span>👥</span><span>Free Follower</span>`;
+    if (bannerEl) bannerEl.style.display = "none";
+    if (creatorViewEl) creatorViewEl.classList.remove("membership-expired");
+    if (m.isMember) {
+      const renewStr = m.nextChargeDate ? ` · Renews ${new Date(m.nextChargeDate).toLocaleDateString()}` : "";
+      badgeBtn.innerHTML = `${ICON_DIAMOND_OUTLINE}<span>${escapeHtml(m.tierName || "Active Supporter")}${renewStr}</span>`;
+    } else {
+      badgeBtn.innerHTML = `${ICON_USER_OUTLINE}<span>Free Follower</span>`;
+    }
   }
 
   badgeBtn.onclick = (e) => {
@@ -1115,8 +1134,8 @@ function showMembershipModal(creator) {
   rows.push(`
     <div class="membership-info-row">
       <span class="membership-info-label">Status</span>
-      <span class="membership-info-val" style="color: ${isExpired ? '#e74c3c' : (m.isMember ? '#38c172' : 'var(--text)')}">
-        ${isExpired ? '🔒 Expired / Inactive' : (m.isMember ? '✅ Active Member' : 'Free Follower')}
+      <span class="membership-info-val" style="color: ${isExpired ? '#e74c3c' : (m.isMember ? '#38c172' : 'var(--text)')}; display: inline-flex; align-items: center; gap: 5px;">
+        ${isExpired ? ICON_LOCK_OUTLINE + ' Expired / Inactive' : (m.isMember ? ICON_DIAMOND_OUTLINE + ' Active Member' : ICON_USER_OUTLINE + ' Free Follower')}
       </span>
     </div>
   `);
@@ -1151,7 +1170,7 @@ function showMembershipModal(creator) {
   if (isExpired) {
     rows.push(`
       <div class="membership-warning-box">
-        <strong>⚠️ Membership expired:</strong> Patron-only media links from previous scans may be locked by Patreon. To download newly unlocked content, please renew on Patreon and perform a fresh scan.
+        <strong>Membership Expired:</strong> Your access to patron-only posts has ended. To view updated tiers and download newly unlocked content, please renew on Patreon and perform a fresh scan.
       </div>
     `);
   }

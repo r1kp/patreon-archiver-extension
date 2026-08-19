@@ -347,10 +347,12 @@
     const p = location.pathname;
     // Explizit KEINE Creator-Seiten:
     if (/^\/(explore|discover|home|search|login|signup|settings|checkout|payment|join|about|press|careers|privacy|terms|sitemap)(\/?$|\/)/.test(p)) return false;
-    // Typische Creator-URLs
-    if (/^\/(c|user)\/[^/]+(\/posts)?(\/?$|[/?#])/.test(p)) return true;
+    // User URL mit Query z.B. /user?u=123
+    if (p === "/user" || p === "/user/") return true;
+    // Typische Creator-URLs (/c/name, /m/name, /user/name, etc.)
+    if (/^\/(c|m|user)\/[^/]+/.test(p)) return true;
     // /creatorname oder /creatorname/posts
-    if (/^\/[^/]+(\/posts)?(\/?$|[/?#])/.test(p)) return true;
+    if (/^\/[^/]+/.test(p)) return true;
     return false;
   }
 
@@ -1427,9 +1429,9 @@
           clearInterval(interval);
           return;
         }
-        if (isCreatorPage() && !isSinglePostPage()) {
+        if (!isSinglePostPage()) {
           const hasPosts = !!findAnyPostId();
-          if (hasPosts || attempts >= 5) {
+          if (hasPosts || attempts >= 4) {
             sessionStorage.removeItem("pa_auto_scan");
             clearInterval(interval);
             console.log("[Patreon Archiver] Starting auto-scan now...");

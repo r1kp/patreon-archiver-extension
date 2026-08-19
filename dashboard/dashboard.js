@@ -1170,17 +1170,19 @@ function showMembershipModal(creator) {
   const hadPastSubscription = !!m.lastChargeDate || (!!m.nextChargeDate && nextCharge && nextCharge < now);
   const isExpired = isFormerPatron || (hadPastSubscription && !m.isMember && m.patronStatus !== "active_patron");
   
-  const cur = (m.currency || "EUR").toUpperCase();
-  const symbol = cur === "EUR" ? "€" : (cur === "GBP" ? "£" : "$");
+  const cur = (m.currency || "USD").toUpperCase();
   const numVal = (m.entitledCents || 0) / 100;
-  const isEuro = symbol === "€";
-  const formattedPrice = numVal.toLocaleString(state.lang === "de" ? "de-DE" : "en-US", {
+  const formattedPrice = numVal.toLocaleString("en-US", {
     minimumFractionDigits: numVal % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2
   });
-  const amountStr = m.entitledCents > 0
-    ? (isEuro ? `${formattedPrice} €/Monat` : `${symbol}${formattedPrice}/mo`)
-    : "Free";
+  let amountStr = "Free";
+  if (m.entitledCents > 0) {
+    if (cur === "EUR") amountStr = `${formattedPrice} €/mo`;
+    else if (cur === "GBP") amountStr = `£${formattedPrice}/mo`;
+    else if (cur === "USD") amountStr = `$${formattedPrice}/mo`;
+    else amountStr = `${cur} ${formattedPrice}/mo`;
+  }
 
   const rows = [];
   rows.push(`

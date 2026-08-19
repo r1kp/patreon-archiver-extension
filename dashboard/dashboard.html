@@ -65,49 +65,54 @@
           <button id="deleteCreatorBtn" class="ghost-btn">Entfernen</button>
         </header>
 
-        <div id="creatorExpiredBanner" class="creator-expired-banner" style="display: none;">
-          <div class="expired-banner-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
+        <div class="creator-body-wrap" style="position: relative;">
+          <div id="creatorExpiredOverlay" class="creator-expired-overlay" style="display: none;">
+            <div class="expired-lock-card">
+              <div class="expired-lock-icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+              <h3 class="expired-lock-title">Membership Expired</h3>
+              <p class="expired-lock-desc">
+                Your active subscription for this creator has ended. Direct media downloads are restricted by Patreon. Please renew on Patreon and perform a fresh scan to unlock content.
+              </p>
+              <div class="expired-lock-buttons">
+                <button id="expiredDetailsBtn" class="ghost-btn sm" style="margin-left: 0;">Membership Details</button>
+                <a id="expiredOverlayPatreonBtn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn sm" style="text-decoration:none;">Rescan on Patreon ↗</a>
+              </div>
+            </div>
           </div>
-          <div class="expired-banner-text">
-            <h4>Membership Expired</h4>
-            <p>Your access to patron-only posts has ended. To view updated tiers and download newly unlocked content, please renew on Patreon and perform a fresh scan.</p>
-          </div>
-          <div class="expired-banner-actions">
-            <a id="expiredBannerPatreonBtn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn sm" style="text-decoration:none;">Rescan on Patreon ↗</a>
-          </div>
-        </div>
 
-        <div class="toolbar">
-          <input id="searchInput" type="search" />
-          <select id="typeFilter"></select>
-          <label class="toolbar-toggle" id="hideDownloadedToggle" style="display: none;">
-            <span id="hideDownloadedLabel">Hide already downloaded</span>
-            <span class="switch"><input type="checkbox" id="hideDownloadedCheck" /><span class="slider"></span></span>
-          </label>
-          <select id="lockFilter"></select>
-          <select id="sortOrder"></select>
-        </div>
-
-        <div class="bulk-bar">
-          <button id="selectAllToggle" class="select-all-btn">
-            <span class="checkmark" id="selectAllCheckmark"></span>
-            <span id="selectAllLabel">Alle sichtbaren Dateien auswählen</span>
-          </button>
-          <span id="selectionCount" class="selection-count">0 ausgewählt</span>
-          <div class="spacer"></div>
-          <div class="format-toggle" id="formatToggle">
-            <button class="format-opt active" data-format="files" id="formatFilesBtn">Einzelne Dateien</button>
-            <button class="format-opt" data-format="zip" id="formatZipBtn">Als ZIP</button>
+          <div class="toolbar">
+            <input id="searchInput" type="search" />
+            <select id="typeFilter"></select>
+            <label class="toolbar-toggle" id="hideDownloadedToggle" style="display: none;">
+              <span id="hideDownloadedLabel">Hide already downloaded</span>
+              <span class="switch"><input type="checkbox" id="hideDownloadedCheck" /><span class="slider"></span></span>
+            </label>
+            <select id="lockFilter"></select>
+            <select id="sortOrder"></select>
           </div>
-          <button id="downloadSelectedBtn" class="primary-btn" disabled>Ausgewählte herunterladen</button>
-          <button id="downloadAllBtn" class="primary-btn outline">Alle gefilterten herunterladen</button>
-        </div>
 
-        <div id="postList" class="post-list"></div>
+          <div class="bulk-bar">
+            <button id="selectAllToggle" class="select-all-btn">
+              <span class="checkmark" id="selectAllCheckmark"></span>
+              <span id="selectAllLabel">Alle sichtbaren Dateien auswählen</span>
+            </button>
+            <span id="selectionCount" class="selection-count">0 ausgewählt</span>
+            <div class="spacer"></div>
+            <div class="format-toggle" id="formatToggle">
+              <button class="format-opt active" data-format="files" id="formatFilesBtn">Einzelne Dateien</button>
+              <button class="format-opt" data-format="zip" id="formatZipBtn">Als ZIP</button>
+            </div>
+            <button id="downloadSelectedBtn" class="primary-btn" disabled>Ausgewählte herunterladen</button>
+            <button id="downloadAllBtn" class="primary-btn outline">Alle gefilterten herunterladen</button>
+          </div>
+
+          <div id="postList" class="post-list"></div>
+        </div>
       </div>
     </main>
   </div>

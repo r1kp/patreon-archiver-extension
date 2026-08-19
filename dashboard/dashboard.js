@@ -1074,14 +1074,15 @@ const ICON_USER_OUTLINE = `<svg width="13" height="13" viewBox="0 0 24 24" fill=
 
 function updateMembershipBadge(creator) {
   const badgeBtn = el("membershipBadgeBtn");
-  const bannerEl = el("creatorExpiredBanner");
+  const overlayEl = el("creatorExpiredOverlay");
   const creatorViewEl = el("creatorView");
-  const expiredPatreonBtn = el("expiredBannerPatreonBtn");
+  const expiredPatreonBtn = el("expiredOverlayPatreonBtn");
+  const expiredDetailsBtn = el("expiredDetailsBtn");
   if (!badgeBtn) return;
   const m = creator?.membership;
   if (!m) {
     badgeBtn.style.display = "none";
-    if (bannerEl) bannerEl.style.display = "none";
+    if (overlayEl) overlayEl.style.display = "none";
     if (creatorViewEl) creatorViewEl.classList.remove("membership-expired");
     return;
   }
@@ -1095,14 +1096,17 @@ function updateMembershipBadge(creator) {
   
   if (isExpired) {
     badgeBtn.innerHTML = `${ICON_LOCK_OUTLINE}<span>${escapeHtml(m.tierName || "Membership")} (Expired)</span>`;
-    if (bannerEl) bannerEl.style.display = "flex";
+    if (overlayEl) overlayEl.style.display = "flex";
     if (creatorViewEl) creatorViewEl.classList.add("membership-expired");
     if (expiredPatreonBtn) {
       const creatorUrl = creator.url || (creator.vanity ? `https://www.patreon.com/${creator.vanity}` : `https://www.patreon.com/user?u=${creator.id}`);
       expiredPatreonBtn.href = creatorUrl;
     }
+    if (expiredDetailsBtn) {
+      expiredDetailsBtn.onclick = () => showMembershipModal(creator);
+    }
   } else {
-    if (bannerEl) bannerEl.style.display = "none";
+    if (overlayEl) overlayEl.style.display = "none";
     if (creatorViewEl) creatorViewEl.classList.remove("membership-expired");
     if (m.isMember) {
       const renewStr = m.nextChargeDate ? ` · Renews ${new Date(m.nextChargeDate).toLocaleDateString()}` : "";

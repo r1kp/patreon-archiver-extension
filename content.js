@@ -959,7 +959,17 @@
 
     const isPaying = patronStatus === "active_patron" && entitledCents > 0;
     if (!isPaying) {
-      return { isMember: false, tiersTotal: tiers.length, checkedAt: Date.now() };
+      return {
+        isMember: false,
+        patronStatus: patronStatus || "none",
+        tierName: null,
+        entitledCents: 0,
+        nextChargeDate,
+        lastChargeDate: mAttr.last_charge_date || null,
+        pledgeStart: mAttr.pledge_relationship_start || null,
+        tiersTotal: tiers.length,
+        checkedAt: Date.now()
+      };
     }
 
     // Aktuelles Tier über den berechtigten Betrag zuordnen; Position bestimmen.
@@ -974,11 +984,15 @@
 
     return {
       isMember: true,
+      patronStatus: "active_patron",
       tierName: currentTier?.title || null,
       tierPosition: currentTier?.position || null,
       tiersTotal: tiers.length,
       entitledCents,
       nextChargeDate, // ab wann die Mitgliedschaft theoretisch neu geprüft werden sollte
+      lastChargeDate: mAttr.last_charge_date || null,
+      pledgeStart: mAttr.pledge_relationship_start || null,
+      cadence: mAttr.cadence || (mAttr.pledge_cadence ?? 1),
       checkedAt: Date.now(),
     };
   }

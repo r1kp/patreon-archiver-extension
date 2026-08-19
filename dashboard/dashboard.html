@@ -55,7 +55,10 @@
         <header class="view-header">
           <img id="creatorAvatar" class="avatar" src="" alt="" />
           <div class="view-header-text">
-            <h2 id="creatorName"></h2>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h2 id="creatorName" style="margin: 0;"></h2>
+              <button id="membershipBadgeBtn" class="membership-badge-btn" style="display: none;" title="View Membership Details"></button>
+            </div>
             <p id="creatorMeta"></p>
           </div>
           <button id="deleteCreatorBtn" class="ghost-btn">Entfernen</button>
@@ -90,6 +93,25 @@
         <div id="postList" class="post-list"></div>
       </div>
     </main>
+  </div>
+
+  <div id="membershipModal" class="modal-overlay" style="display:none;">
+    <div class="modal membership-modal" style="max-width: 440px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size: 18px;">🎖️</span>
+          <h3 id="membershipModalTitle" style="margin:0; font-size:16px; font-weight: 700;">Membership Details</h3>
+        </div>
+        <span class="modal-close" id="membershipModalClose" style="cursor: pointer; font-size: 16px; color: var(--text-dim);">✕</span>
+      </div>
+      <div class="modal-section" style="margin-top: 10px;">
+        <div id="membershipModalContent" class="membership-modal-details"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+        <a id="membershipPatreonLink" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn outline sm" style="text-decoration:none;">Open on Patreon ↗</a>
+        <button id="membershipModalDone" class="primary-btn sm">Close</button>
+      </div>
+    </div>
   </div>
 
   <div id="welcomeModal" class="modal-overlay" style="display:none;">

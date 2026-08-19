@@ -200,7 +200,13 @@ function setRowProgress(key, patch) {
   if ((patch.status === "active" || patch.status === "scanning") && (alreadyFinal || sig?.cancelled)) return;
   if (patch.status === "queued" || patch.status === "scanning") {
     delete prev.status;
+    delete prev.received;
+    delete prev.total;
+    delete prev.pct;
     prev._lastShownPct = 0;
+    if (patch.postId != null) {
+      state.postAggPct.delete(patch.postId);
+    }
   }
   const info = { ...prev, ...patch };
   state.activeDownloads.set(key, info);
@@ -574,50 +580,17 @@ function updatePostAggregateUI(postId) {
     // frischen Anker an, statt bei 100% kleben zu bleiben (siehe unten).
     state.postAggPct.set(postId, { shown: 100, anchorPct: 100, anchorBytes: 0, finished: true });
 
-    // Anteile NACH BYTE-GEWICHT, nicht nach blosser Anzahl: ein
-    // fehlgeschlagener 2-GB-Cloud-Ordner neben zwei winzigen Textdateien soll
-    // den Balken auch entsprechend gross rot faerben (User-Vorgabe "sized by
-    // weight"). Vorher war die Aufteilung rein anzahlbasiert
-    // (doneCount/totalFinished) und damit bei gemischten Groessen irrefuehrend.
-    // GEWICHT FUER DIE FARBAUFTEILUNG - bewusst NICHT dasselbe wie rowWeight().
-    //
-    // rowWeight() faellt auf das EINGEPLANTE Gewicht zurueck (SIZE_ESTIMATE.CLOUD
-    // = 800 MB, VIDEO = 250 MB), wenn keine echte Groesse bekannt ist. Fuer den
-    // laufenden Fortschritt ist das richtig (man braucht einen Nenner), fuer die
-    // Farbaufteilung am Ende ist es fatal: ein abgebrochenes Item hat NIE eine
-    // gemessene Groesse und behaelt deshalb seine riesige Schaetzung, waehrend
-    // die erfolgreichen Items laengst auf ihre echte (meist viel kleinere)
-    // Groesse korrigiert wurden. Drei fertige Textdateien (~2 MB) neben einem
-    // abgebrochenen Cloud-Link (800-MB-Schaetzung) ergaben so 0,25% gruen -
-    // der Balken sah komplett gelb aus, obwohl 3 von 4 Dateien fertig waren.
-    // Genau diese Meldung kam vom Nutzer.
-    //
-    // Regel jetzt: NUR GEMESSENE Bytes duerfen die Aufteilung dominieren. Ein
-    // nie vermessenes Item zaehlt wie ein durchschnittliches gemessenes Item
-    // (bzw. wie ein gleicher Anteil, wenn gar nichts gemessen wurde) - damit
-    // bleibt die byte-gewichtete Darstellung aus Runde 19 fuer echte Groessen
-    // erhalten (ein fehlgeschlagener 2-GB-Ordner faerbt weiterhin gross rot,
-    // seine Groesse ist ja gemessen), waehrend reine Schaetzungen nicht mehr
-    // das Bild bestimmen.
-    const measuredWeight = (v) => (v?.total > 0 ? v.total : (v?.received > 0 ? v.received : 0));
-    const measured = settled.map(measuredWeight).filter((w) => w > 0);
-    const fallbackUnit = measured.length > 0
-      ? measured.reduce((a, b) => a + b, 0) / measured.length
-      : 1;
-    const splitWeight = (v) => measuredWeight(v) || fallbackUnit;
-
-    const wSum = (rows) => rows.reduce((acc, v) => acc + splitWeight(v), 0);
-    const wDone = wSum(doneRows);
-    const wWarn = wSum(cancelledRows);
-    const wErr = wSum(errorRows) + wSum(unknownRows);
-    const wAll = wDone + wWarn + wErr;
+    const totalCount = settled.length;
+    const countDone = doneRows.length;
+    const countWarn = cancelledRows.length;
+    const countErr = errorRows.length + unknownRows.length;
 
     const setSolid = (color) => {
       fillEl.style.backgroundImage = "none";
       fillEl.style.backgroundColor = color;
     };
 
-    if (wAll <= 0 || (wWarn === 0 && wErr === 0)) {
+    if (totalCount <= 0 || (countWarn === 0 && countErr === 0)) {
       setSolid("var(--green)");
       if (textEl) textEl.textContent = L("doneShort");
       const postSelect = card.querySelector(".post-select");
@@ -630,98 +603,69 @@ function updatePostAggregateUI(postId) {
           setTimeout(() => postSelect.classList.remove("pop-animate"), 400);
         }
       }
-    } else if (wDone === 0 && wErr === 0) {
+    } else if (countDone === 0 && countErr === 0) {
       setSolid("var(--warn)");
       if (textEl) textEl.textContent = L("cancelledShort");
-    } else if (wDone === 0 && wWarn === 0) {
+    } else if (countDone === 0 && countWarn === 0) {
       setSolid("#e74c3c");
       if (textEl) textEl.textContent = L("errorShort");
     } else {
-      // Gemischter Zustand -> proportionaler Gruen/Gelb/Rot-Verlauf.
-      const pGreen = (wDone / wAll) * 100;
-      const pWarn = (wWarn / wAll) * 100;
-      const pErr = (wErr / wAll) * 100;
+      // Gemischter Zustand -> proportionaler Gruen/Gelb/Rot-Verlauf nach ANZAHL DER DATEIEN
+      const pGreen = (countDone / totalCount) * 100;
+      const pWarn = (countWarn / totalCount) * 100;
+      const pErr = (countErr / totalCount) * 100;
       const stops = [];
       let curr = 0;
       if (pGreen > 0) { stops.push(`#38c172 ${curr}%`, `#38c172 ${curr + pGreen}%`); curr += pGreen; }
       if (pWarn > 0) { stops.push(`#f5a623 ${curr}%`, `#f5a623 ${curr + pWarn}%`); curr += pWarn; }
       if (pErr > 0) { stops.push(`#e74c3c ${curr}%`, `#e74c3c ${curr + pErr}%`); curr += pErr; }
-      // backgroundColor/-Image getrennt setzen (nicht die `background`-Kurzform):
-      // die Kurzform setzt background-image implizit auf `none` zurueck und
-      // wuerde den Scanning-Shimmer der CSS-Klasse ueberschreiben.
       fillEl.style.backgroundColor = "transparent";
       fillEl.style.backgroundImage = `linear-gradient(90deg, ${stops.join(", ")})`;
       const textParts = [];
-      if (doneRows.length > 0) textParts.push(`${doneRows.length} ✓`);
-      if (cancelledRows.length > 0) textParts.push(`${cancelledRows.length} ✕`);
-      if (errorRows.length + unknownRows.length > 0) textParts.push(`${errorRows.length + unknownRows.length} !`);
+      if (countDone > 0) textParts.push(`${countDone} ✓`);
+      if (countWarn > 0) textParts.push(`${countWarn} ✕`);
+      if (countErr > 0) textParts.push(`${countErr} !`);
       if (textEl) textEl.textContent = textParts.join(" · ");
     }
     return;
   }
 
   // Solange noch irgendein Item dieses Posts laeuft, bleibt der Balken
-  // schlicht im Akzentton - der aufgeteilte Rot/Gelb/Gruen-Farbverlauf
-  // erscheint erst oben, sobald WIRKLICH ALLES fertig ist.
+  // schlicht im Akzentton
   aggEl.style.display = "flex";
   fillEl.style.backgroundColor = "var(--accent)";
 
-  // Gewichteter Fortschritt ueber ALLE Items des Posts.
-  let weightDone = 0;
-  let totalWeight = 0;
-  let sumBytesReceived = 0;
-  let sumBytesTotal = 0;
+  // Hybrider Fortschritt: Anzahl fertiger/abgeschlossener Items + Live-Stream-Fortschritt aktiver Items
+  const totalEntries = entries.length;
+  let finishedCount = 0;
+  let activeProgressSum = 0;
   let scanningCount = 0;
 
   entries.forEach((v) => {
-    const itemWeight = rowWeight(v);
-    totalWeight += itemWeight;
-
-    if (v.status === "done") {
-      weightDone += itemWeight;
-      sumBytesReceived += itemWeight;
-      sumBytesTotal += itemWeight;
-    } else if (v.status === "error" || v.status === "cancelled") {
-      // Abgeschlossen (wenn auch erfolglos) - blockiert den Balken nicht mehr.
-      weightDone += itemWeight;
-      sumBytesTotal += itemWeight;
+    if (v.status === "done" || v.status === "error" || v.status === "cancelled") {
+      finishedCount += 1;
     } else if (v.status === "active") {
-      const received = rowReceived(v);
-      weightDone += Math.min(itemWeight, received);
-      sumBytesReceived += Math.min(itemWeight, received);
-      sumBytesTotal += itemWeight;
+      const rec = rowReceived(v);
+      const tot = rowTotal(v) || rowWeight(v);
+      if (tot > 0 && rec > 0) {
+        activeProgressSum += Math.min(1, rec / tot);
+      }
     } else if (v.status === "scanning") {
-      // Groesse noch unbekannt: KEIN kuenstlicher Fortschritt. Der frueher hier
-      // addierte 5%-Bonus taeuschte Fortschritt vor, den es nicht gibt.
       if (isSizingRow(v)) scanningCount++;
-      sumBytesTotal += itemWeight;
     }
   });
 
-  // Gleiche Anker-Logik wie bei der Ecke-Bar (advanceAnchoredProgress) statt
-  // der frueheren reinen Math.max-Klammer. Konkreter Fall aus dem Test: 3 von 4
-  // Dateien eines Posts sind fertig, dann startet die 4te (Schaetzung 15 MB,
-  // tatsaechlich mehrere GB) - der Nenner vervielfacht sich, das Verhaeltnis
-  // faellt auf nahezu 0. Mit der alten Klammer blieb der Balken danach
-  // eingefroren; ohne Klammer waere er sichtbar auf 0 zurueckgesprungen ("geht
-  // von vorne los"). Mit Neuverankerung bleibt der erreichte Stand stehen und
-  // der Balken laeuft ab dort mit dem restlichen Byte-Budget weiter.
-  let anchor = state.postAggPct.get(postId);
-  // `typeof !== object` faengt Eintraege aus der frueheren Implementierung ab
-  // (dort lag eine nackte Zahl in der Map). `finished` heisst: der Post war
-  // schon einmal komplett fertig, jetzt laeuft wieder etwas -> neue Runde,
-  // frischer Anker (sonst bliebe der Balken bei 100% stehen).
-  if (!anchor || typeof anchor !== "object" || anchor.finished) anchor = newProgressAnchor();
-  const rawPct = advanceAnchoredProgress(anchor, weightDone, totalWeight);
-  state.postAggPct.set(postId, anchor);
-  // Solange noch Items laufen, darf der Post-Gesamtbalken MAXIMAL 99% erreichen
-  // (nur die Anzeige deckeln, nicht den intern gemerkten Wert - sonst wuerde
-  // der Anker bei jedem Tick unnoetig neu gesetzt).
-  const pct = Math.min(99, Math.round(rawPct));
+  const liveRatio = totalEntries > 0 ? (finishedCount + activeProgressSum) / totalEntries : 0;
+  const rawPct = Math.min(100, liveRatio * 100);
 
+  let anchor = state.postAggPct.get(postId);
+  if (!anchor || typeof anchor !== "object" || anchor.finished) anchor = newProgressAnchor();
+  const smoothedPct = advanceAnchoredProgress(anchor, rawPct, 100);
+  state.postAggPct.set(postId, anchor);
+
+  const pct = Math.min(99, Math.round(smoothedPct));
   setAggFillWidth(fillEl, pct);
-  // Scan-Phase (Anbieter ermittelt gerade die echte Groesse) sichtbar machen -
-  // dasselbe Signal wie der graue Puls der Einzelzeile, nur eine Ebene hoeher.
+
   if (scanningCount > 0) {
     fillEl.classList.add("post-agg-scanning");
     fillEl.style.backgroundImage =
@@ -731,11 +675,6 @@ function updatePostAggregateUI(postId) {
     fillEl.style.backgroundImage = "none";
   }
   if (textEl) {
-    // Zusaetzlich zur (byte-gewichteten) Prozentzahl auch die reine Anzahl
-    // zeigen. Der Balken ist bewusst byte-gewichtet - drei winzige Textdateien
-    // neben einem 5-GB-Ordner sind eben nicht "75% fertig" -, aber genau das
-    // erwartet man beim Blick auf die Zeilen. Die "3/4"-Angabe daneben
-    // aufloest den scheinbaren Widerspruch, ohne die Balkenlogik zu verbiegen.
     const settledCount = entries.length - stillGoing.length;
     const parts = [`${settledCount}/${entries.length}`, `${pct}%`];
     if (sumBytesTotal > 0) {
@@ -2117,10 +2056,11 @@ function startProgressAnimation() {
       visualBytesDone = targetBytes;
     }
 
-    const clampedOverall = Math.min(100, visualOverallPct);
+    const isFinishing = progressFinishing || state.targetOverallPct >= 100;
+    const clampedOverall = isFinishing ? Math.min(100, visualOverallPct) : Math.min(99, visualOverallPct);
     const fillEl = el("progressFill");
     fillEl.style.width = `${clampedOverall}%`;
-    if (clampedOverall >= 100) {
+    if (isFinishing && clampedOverall >= 100) {
       fillEl.classList.add("done");
     } else {
       fillEl.classList.remove("done");
@@ -2128,10 +2068,13 @@ function startProgressAnimation() {
 
     el("progressFileFill").style.width = `${Math.min(100, visualFilePct)}%`;
 
-    const overallTextPct = Math.min(100, Math.round(visualOverallPct));
-    const overallCountClamped = Math.min(state.lastDoneCount + (clampedOverall >= 100 ? 0 : 1), state.lastTotalCount);
-
-    el("progressMeta").textContent = `${overallCountClamped}/${state.lastTotalCount} (${overallTextPct}%)`;
+    const overallTextPct = Math.min(isFinishing ? 100 : 99, Math.round(visualOverallPct));
+    if (state.lastTotalCount > 0) {
+      const overallCountClamped = Math.min(state.lastDoneCount + (clampedOverall >= 100 ? 0 : 1), state.lastTotalCount);
+      el("progressMeta").textContent = `${overallCountClamped}/${state.lastTotalCount} (${overallTextPct}%)`;
+    } else {
+      el("progressMeta").textContent = anyRowScanning() ? "Scanning..." : "Preparing...";
+    }
     el("progressEta").textContent = calculateSmoothEta();
     // "~" solange mindestens eine Zeile noch auf die echte Groesse wartet
     // (Cloud-Scan) - die Gesamtsumme enthaelt dann noch SIZE_ESTIMATE-
@@ -3019,12 +2962,16 @@ async function downloadEmbedViaYtDlp(post, isRetry = false) {
 
   const embedKey = fileKey(post.id, post.video.url || `${post.id}::embed`, "embed");
 
-  if (existingFile) {
+  const shouldSkipExisting = settings.skipExistingFiles !== false && !isRetry;
+  if (shouldSkipExisting && existingFile) {
     if (!isRetry) {
       showProgress("Downloading video...");
     }
+    state.lastDoneCount = 1;
+    state.lastTotalCount = 1;
     el("progressFileLabel").textContent = `${post.title} · Video (skipped)`;
     state.targetFilePct = 100;
+    state.targetOverallPct = 100;
     await finishProgressSuccessfully();
     if (post.video) post.video.downloaded = true;
     updateFileDownloadStatus(post.id, post.video.url, { downloaded: true }).catch((err) =>
@@ -3038,6 +2985,8 @@ async function downloadEmbedViaYtDlp(post, isRetry = false) {
 
   if (!isRetry) {
     showProgress("Downloading video...");
+    state.lastDoneCount = 0;
+    state.lastTotalCount = 1;
     setRowProgress(embedKey, { status: "queued", postId: post.id });
   } else {
     state.targetOverallPct = 0;

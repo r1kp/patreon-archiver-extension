@@ -539,12 +539,9 @@ body {
 
 /* Settings modal */
 .modal-overlay {
-  /* Dimmt weniger stark als vorher (0.4 statt 0.55) - laesst mehr vom
-     farbigen Body-Gradient durchscheinen, damit der Blur des Modals selbst
-     etwas zu vermischen hat statt nur eine flache Abdunkelung zu zeigen. */
-  position: fixed; inset: 0; background: rgba(8,8,10,.4); display: flex;
-  align-items: center; justify-content: center; z-index: 1000;
-  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  position: fixed; inset: 0; background: rgba(8,8,10,.5); display: flex;
+  align-items: center; justify-content: center; z-index: 1200;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 @keyframes modalScaleIn {
   from { opacity: 0; transform: scale(0.96); }
@@ -600,6 +597,82 @@ body {
   flex-direction: column;
   gap: 12px;
   margin-top: 10px;
+}
+
+/* Membership Badge & Modal */
+.membership-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  background: var(--bg-card);
+  color: var(--text-dim);
+}
+.membership-badge-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.membership-badge-btn.active {
+  background: rgba(56, 193, 114, 0.12);
+  border-color: rgba(56, 193, 114, 0.35);
+  color: #38c172;
+}
+.membership-badge-btn.active:hover {
+  background: rgba(56, 193, 114, 0.2);
+  border-color: rgba(56, 193, 114, 0.5);
+}
+.membership-badge-btn.expired {
+  background: rgba(231, 76, 60, 0.12);
+  border-color: rgba(231, 76, 60, 0.35);
+  color: #e74c3c;
+}
+.membership-badge-btn.expired:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.5);
+}
+.membership-badge-btn.free {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-dim);
+}
+
+.membership-modal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.membership-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.membership-info-label {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.membership-info-val {
+  font-weight: 600;
+  color: var(--text);
+}
+.membership-warning-box {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(231, 76, 60, 0.1);
+  border-left: 3px solid #e74c3c;
+  color: #ff9999;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .storage-option {
   display: flex;
@@ -1289,7 +1362,7 @@ input[type=number] {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 1050;
+  z-index: 950;
   display: flex;
   flex-direction: column;
   align-items: center;

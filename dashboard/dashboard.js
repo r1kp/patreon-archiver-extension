@@ -646,6 +646,8 @@ function updatePostAggregateUI(postId) {
   let finishedCount = 0;
   let activeProgressSum = 0;
   let scanningCount = 0;
+  let waitingCount = 0;
+  let mergingCount = 0;
   let sumBytesReceived = 0;
   let sumBytesTotal = 0;
 
@@ -666,16 +668,23 @@ function updatePostAggregateUI(postId) {
       }
       sumBytesReceived += Math.min(itemWeight, rec);
       sumBytesTotal += itemWeight;
+      if (v.phase === "merging" || v.phaseLabel === "Merging") mergingCount++;
     } else if (v.status === "scanning") {
       if (isSizingRow(v)) scanningCount++;
+      sumBytesTotal += itemWeight;
+    } else if (v.status === "queued" || v.status === "waiting") {
+      waitingCount++;
       sumBytesTotal += itemWeight;
     } else {
       sumBytesTotal += itemWeight;
     }
   });
 
-  const liveRatio = totalEntries > 0 ? (finishedCount + activeProgressSum) / totalEntries : 0;
-  const rawPct = Math.min(100, liveRatio * 100);
+  // Byte-gewichteter Fortschritt statt bloßer Item-Anzahl:
+  // Verhindert, dass die Leiste auf 75% springt, nur weil Description + Thumbnail (wenige KB)
+  // in 100ms fertig sind, während das Video (250MB+) noch lädt!
+  const byteRatio = sumBytesTotal > 0 ? (sumBytesReceived / sumBytesTotal) : (totalEntries > 0 ? (finishedCount + activeProgressSum) / totalEntries : 0);
+  const rawPct = Math.min(100, byteRatio * 100);
 
   let anchor = state.postAggPct.get(postId);
   if (!anchor || typeof anchor !== "object" || anchor.finished) anchor = newProgressAnchor();
@@ -702,7 +711,13 @@ function updatePostAggregateUI(postId) {
       const approx = scanningCount > 0 || entries.some((v) => isRowLive(v) && !(v.total > 0));
       parts.push(`${formatBytes(sumBytesReceived)} / ${approx ? "~" : ""}${formatBytes(sumBytesTotal)}`);
     }
-    if (scanningCount > 0) parts.push(L("scanning"));
+    if (mergingCount > 0) {
+      parts.push("Merging...");
+    } else if (scanningCount > 0) {
+      parts.push(L("scanning"));
+    } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
+      parts.push("Waiting...");
+    }
     textEl.textContent = parts.join(" · ");
   }
 }
@@ -3145,14 +3160,17 @@ async function downloadComments(post) {
 
 async function downloadEmbedViaYtDlp(post, isRetry = false) {
   const settings = await currentDownloadSettings();
-  const ping = await pingYtDlpHost().catch(() => ({ ok: false }));
+  let ping = await pingYtDlpHost().catch(() => ({ ok: false }));
+  if (!ping.ok && state.bridgeReady) {
+    ping = await pingYtDlpHost(true).catch(() => ({ ok: false }));
+  }
 
-  if (!ping.ok) {
+  if (!ping.ok && !state.bridgeReady) {
     showToast("The bridge isn't set up yet - opening the setup guide.");
     chrome.tabs.create({ url: chrome.runtime.getURL("setup/setup.html") });
     return;
   }
-  if (!ping.ytdlpFound) {
+  if (!ping.ytdlpFound && !state.bridgeReady) {
     showToast("Bridge is connected, but video downloads aren't set up yet - enable them in Settings.");
     openSettingsModal();
     return;

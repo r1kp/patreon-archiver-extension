@@ -142,6 +142,7 @@ function fileKey(postId, fileUrl, kindOrRole = "") {
 // (.badge.locked / .badge.external-files in dashboard.css).
 const ICON_LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>`;
 const ICON_LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+const ICON_VIDEO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`;
 
 // ---------- Inline-Progress pro Zeile/Post-Karte (Variante 3 des Umbaus) ----------
 // Ersetzt das alte Modell "ein Item nach dem anderen, ein globaler Balken" -
@@ -1436,23 +1437,20 @@ function renderPostList() {
 
     const hasExternal = (post.files || []).length > 0;
 
-    // Patreons rohe post_type-Kennung als Badge - aber nur, wo sie ueberhaupt
-    // etwas beitraegt:
-    // - "image_file": redundant zur ohnehin vorhandenen Thumbnail-Zeile und je
-    //   nach Bildanzahl inkonsistent gesetzt (seit dem UI-Umbau ausgeblendet).
-    // - "link": Patreons Typ fuer Posts, deren Hauptinhalt ein externer Link ist.
-    //   Sobald darunter die "External Files"-Badge steht (und die Zeile selbst
-    //   den konkreten Anbieter zeigt, z.B. "Google Drive"), sagt ein zusaetzliches
-    //   kleingeschriebenes "link" nichts Neues - es wirkte wie ein Doppel-Badge
-    //   fuer denselben Sachverhalt. Ohne erkannten externen Link bleibt es
-    //   sichtbar, dort ist es die EINZIGE Information ueber die Post-Art.
-    //   (Sichtbar wurde das Paar erst, seit ein Cloud-Link-Embed korrekt in
-    //   post.files landet statt als vermeintliches Video - siehe Runde 21:
-    //   vorher war hasExternal fuer solche Posts false, also gab es die
-    //   "External Files"-Badge gar nicht.)
-    const postTypeIsRedundant =
-      post.postType === "image_file" || (post.postType === "link" && hasExternal);
-    if (post.postType && !postTypeIsRedundant) {
+    if (post.video) {
+      badges.push(`<span class="badge video-files" title="Enthält Video">${ICON_VIDEO}Video File(s)</span>`);
+    }
+
+    const internalPostTypes = [
+      "image_file",
+      "link",
+      "video_external_file",
+      "video_embed",
+      "video",
+      "audio_embed",
+      "text_only",
+    ];
+    if (post.postType && !internalPostTypes.includes(post.postType)) {
       badges.push(`<span class="badge">${escapeHtml(post.postType)}</span>`);
     }
 

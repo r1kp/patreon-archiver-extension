@@ -245,6 +245,9 @@ function updateRowUI(key, info, targetRow = null) {
     if (info.total > 0) {
       sizeEl.textContent = formatBytes(info.total);
       sizeEl.style.display = "inline";
+    } else if (info.itemWeight > 0 && !info.empty) {
+      sizeEl.textContent = `~${formatBytes(info.itemWeight)}`;
+      sizeEl.style.display = "inline";
     } else if (info.empty && !sizeEl.textContent) {
       // Schritt ist fertig, es gibt aber keinen Byte-Wert (Description/Comments
       // ohne Inhalt bzw. bereits vorhandene Datei) - "-" statt einer
@@ -297,14 +300,27 @@ function updateRowUI(key, info, targetRow = null) {
       byteInfo = ` · ${formatBytes(info.received)} / ${formatBytes(info.total)}`;
     } else if (info.pct != null) {
       pct = Math.min(100, Math.round(info.pct));
-      if (info.received > 0) byteInfo = ` · ${formatBytes(info.received)}`;
+      if (info.received > 0) {
+        byteInfo = ` · ${formatBytes(info.received)}`;
+      } else if (info.itemWeight > 0) {
+        const estRec = Math.round((pct / 100) * info.itemWeight);
+        byteInfo = ` · ~${formatBytes(estRec)} / ~${formatBytes(info.itemWeight)}`;
+      }
     }
     pct = Math.max(pct, info._lastShownPct || 0);
     info._lastShownPct = pct;
     fillEl.style.width = `${pct}%`;
     fillEl.className = "row-progress-fill";
-    const speedStr = info.speed ? ` · ${info.speed}` : "";
-    textEl.textContent = `${pct}%${speedStr}${byteInfo}`;
+
+    if (info.phase === "merging") {
+      textEl.textContent = `Finalizing (${pct}%)...`;
+    } else if (info.phase === "audio") {
+      const speedStr = info.speed ? ` · ${info.speed}` : "";
+      textEl.textContent = `${pct}% · Audio${speedStr}${byteInfo}`;
+    } else {
+      const speedStr = info.speed ? ` · ${info.speed}` : "";
+      textEl.textContent = `${pct}%${speedStr}${byteInfo}`;
+    }
     btn.textContent = L("cancel");
     btn.classList.add("row-cancel-btn");
     return;
@@ -686,7 +702,7 @@ function updatePostAggregateUI(postId) {
     if (scanningCount > 0) {
       trackEl.classList.remove("waiting");
       trackEl.classList.add("scanning");
-    } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
+    } else if (waitingCount > 0 && !entries.some(v => v.status === "active" || v.status === "scanning")) {
       trackEl.classList.remove("scanning");
       trackEl.classList.add("waiting");
     } else {
@@ -705,7 +721,7 @@ function updatePostAggregateUI(postId) {
     }
     if (scanningCount > 0) {
       parts.push(L("scanning"));
-    } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
+    } else if (waitingCount > 0 && !entries.some(v => v.status === "active" || v.status === "scanning")) {
       parts.push("Waiting in queue...");
     }
     textEl.textContent = parts.join(" · ");

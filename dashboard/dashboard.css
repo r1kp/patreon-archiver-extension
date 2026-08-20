@@ -443,25 +443,23 @@ body {
    auf einen Blick erkennbar sein. */
 .row-progress-fill.row-progress-waiting {
   width: 100% !important;
-  background: linear-gradient(90deg, #23232b 0%, #3a3a46 50%, #23232b 100%);
+  background: linear-gradient(90deg, #1c1c24 0%, #30303c 50%, #1c1c24 100%);
   background-size: 200% 100%;
-  animation: scanningShimmer 2.6s infinite linear;
-  opacity: .75;
+  animation: waitingPulse 2.8s infinite ease-in-out;
+  opacity: .8;
 }
 .row-progress-fill.row-progress-scanning {
   width: 100% !important;
-  background: linear-gradient(90deg, #25252e 0%, #a0a0b0 50%, #25252e 100%);
+  background: linear-gradient(90deg, #25252e 0%, #d1d5db 50%, #25252e 100%);
   background-size: 200% 100%;
-  animation: scanningShimmer 1.5s infinite linear;
-}
-.row-progress-fill.row-progress-merging {
-  width: 100% !important;
-  background: linear-gradient(90deg, #3730a3 0%, #818cf8 50%, #3730a3 100%);
-  background-size: 200% 100%;
-  animation: scanningShimmer 1.8s infinite linear;
+  animation: scanningShimmer 1.4s infinite linear;
 }
 
 @keyframes scanningShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes waitingPulse {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
@@ -526,19 +524,15 @@ body {
    unbekannt", statt still auf einem falschen Prozentwert zu stehen.
    background-image kommt per Inline-Style aus updatePostAggregateUI(). */
 .post-agg-fill.post-agg-scanning {
-  background-size: 200% 100%;
-  animation: scanningShimmer 1.5s infinite linear;
+  background: linear-gradient(90deg, #25252e 0%, #d1d5db 50%, #25252e 100%) !important;
+  background-size: 200% 100% !important;
+  animation: scanningShimmer 1.4s infinite linear !important;
 }
 .post-agg-fill.post-agg-waiting {
-  background: linear-gradient(90deg, #23232b 0%, #3a3a46 50%, #23232b 100%);
-  background-size: 200% 100%;
-  animation: scanningShimmer 2.6s infinite linear;
-  opacity: .75;
-}
-.post-agg-fill.post-agg-merging {
-  background: linear-gradient(90deg, #3730a3 0%, #818cf8 50%, #3730a3 100%);
-  background-size: 200% 100%;
-  animation: scanningShimmer 1.8s infinite linear;
+  background: linear-gradient(90deg, #1c1c24 0%, #30303c 50%, #1c1c24 100%) !important;
+  background-size: 200% 100% !important;
+  animation: waitingPulse 2.8s infinite ease-in-out !important;
+  opacity: .8;
 }
 .post-agg-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
 .post-card.expanded .post-card-text,

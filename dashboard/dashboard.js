@@ -304,19 +304,9 @@ function updateRowUI(key, info, targetRow = null) {
     pct = Math.max(pct, info._lastShownPct || 0);
     info._lastShownPct = pct;
     fillEl.style.width = `${pct}%`;
-
-    if (info.phase === "merging" || info.phase === "merger") {
-      fillEl.className = "row-progress-fill row-progress-merging";
-      textEl.textContent = `Merging (${pct}%)...`;
-    } else if (info.phase === "audio") {
-      fillEl.className = "row-progress-fill";
-      const speedStr = info.speed ? ` · ${info.speed}` : "";
-      textEl.textContent = `${pct}% · Audio${speedStr}${byteInfo}`;
-    } else {
-      fillEl.className = "row-progress-fill";
-      const speedStr = info.speed ? ` · ${info.speed}` : "";
-      textEl.textContent = `${pct}%${speedStr}${byteInfo}`;
-    }
+    fillEl.className = "row-progress-fill";
+    const speedStr = info.speed ? ` · ${info.speed}` : "";
+    textEl.textContent = `${pct}%${speedStr}${byteInfo}`;
     btn.textContent = L("cancel");
     btn.classList.add("row-cancel-btn");
     return;
@@ -646,7 +636,6 @@ function updatePostAggregateUI(postId) {
   let activeProgressSum = 0;
   let scanningCount = 0;
   let waitingCount = 0;
-  let mergingCount = 0;
   let sumBytesReceived = 0;
   let sumBytesTotal = 0;
 
@@ -667,7 +656,6 @@ function updatePostAggregateUI(postId) {
       }
       sumBytesReceived += Math.min(itemWeight, rec);
       sumBytesTotal += itemWeight;
-      if (v.phase === "merging" || v.phaseLabel === "Merging") mergingCount++;
     } else if (v.status === "scanning") {
       if (isSizingRow(v)) scanningCount++;
       sumBytesTotal += itemWeight;
@@ -696,21 +684,13 @@ function updatePostAggregateUI(postId) {
   const settledCount = entries.length - stillGoing.length;
 
   if (scanningCount > 0) {
-    fillEl.classList.remove("post-agg-waiting", "post-agg-merging");
+    fillEl.classList.remove("post-agg-waiting");
     fillEl.classList.add("post-agg-scanning");
-    fillEl.style.backgroundImage =
-      "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.45) 50%, rgba(255,255,255,0) 100%)";
-  } else if (mergingCount > 0) {
-    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
-    fillEl.classList.add("post-agg-merging");
-    fillEl.style.backgroundImage = "none";
   } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
-    fillEl.classList.remove("post-agg-scanning", "post-agg-merging");
+    fillEl.classList.remove("post-agg-scanning");
     fillEl.classList.add("post-agg-waiting");
-    fillEl.style.backgroundImage = "none";
   } else {
-    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting", "post-agg-merging");
-    fillEl.style.backgroundImage = "none";
+    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
   }
 
   if (textEl) {
@@ -721,9 +701,7 @@ function updatePostAggregateUI(postId) {
       const approx = scanningCount > 0 || entries.some((v) => isRowLive(v) && !(v.total > 0));
       parts.push(`${formatBytes(sumBytesReceived)} / ${approx ? "~" : ""}${formatBytes(sumBytesTotal)}`);
     }
-    if (mergingCount > 0) {
-      parts.push("Merging video...");
-    } else if (scanningCount > 0) {
+    if (scanningCount > 0) {
       parts.push(L("scanning"));
     } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
       parts.push("Waiting in queue...");

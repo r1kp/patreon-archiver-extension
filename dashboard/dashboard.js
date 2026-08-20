@@ -1490,16 +1490,19 @@ function renderPostList() {
 
     card.querySelector(".post-card-top").addEventListener("click", (e) => {
       if (e.target.closest('[data-role="post-select"]')) return;
-      if (state.expanded.has(post.id)) state.expanded.delete(post.id);
-      else {
+      const isExpanded = state.expanded.has(post.id);
+      if (isExpanded) {
+        state.expanded.delete(post.id);
+        card.classList.remove("expanded");
+        const toggle = card.querySelector(".toggle");
+        if (toggle) toggle.textContent = "▸";
+      } else {
         state.expanded.add(post.id);
-        // Kommentar-Groesse genau jetzt nachladen (einmal pro Post und Sitzung) -
-        // der Nutzer schaut sich diesen Post gerade an. Absichtlich NICHT
-        // awaiten: das Aufklappen soll sofort passieren, die Zahl traegt sich
-        // nach, sobald sie da ist.
+        card.classList.add("expanded");
+        const toggle = card.querySelector(".toggle");
+        if (toggle) toggle.textContent = "▾";
         ensureCommentsSize(post);
       }
-      renderPostList();
     });
 
     const fileListEl = card.querySelector(".file-list");
@@ -1776,11 +1779,20 @@ function getQuickJumpPostTargets() {
   if (isDownloading) {
     const activeKeySet = new Set(state.activeDownloadKeys);
     cards.forEach((card) => {
+      const postId = card.getAttribute("data-post-id");
       const rows = card.querySelectorAll(".file-row[data-key]");
       let hasActive = false;
       rows.forEach((r) => {
         if (activeKeySet.has(r.getAttribute("data-key"))) hasActive = true;
       });
+      if (!hasActive && postId) {
+        for (const k of activeKeySet) {
+          if (k.startsWith(`${postId}::`)) {
+            hasActive = true;
+            break;
+          }
+        }
+      }
       if (hasActive) {
         targets.push(card);
       }
@@ -1917,6 +1929,8 @@ function jumpDirection(direction) {
   if (postId && !state.expanded.has(postId)) {
     state.expanded.add(postId);
     targetCard.classList.add("expanded");
+    const toggle = targetCard.querySelector(".toggle");
+    if (toggle) toggle.textContent = "▾";
     // Gleiche Nachladelogik wie beim Klick-Aufklappen (siehe ensureCommentsSize()).
     const jumpPost = state.posts?.find((p) => String(p.id) === String(postId));
     if (jumpPost) ensureCommentsSize(jumpPost);
@@ -4001,7 +4015,11 @@ async function runBulkDownload(onlySelected) {
       }
     })
   );
-  if (filePairs.length) await downloadMany(filePairs);
+  if (filePairs.length === 0) {
+    showToast(onlySelected ? "No selected items to download." : "No downloadable items found for current filter.");
+    return;
+  }
+  await downloadMany(filePairs);
   if (onlySelected) state.selected.clear();
   renderPostList();
 }

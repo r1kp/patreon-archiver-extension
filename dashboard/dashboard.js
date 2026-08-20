@@ -1393,6 +1393,14 @@ async function ensureCommentsSize(post) {
 }
 
 function renderPostList() {
+  // Während eines laufenden Downloads NIEMALS die gesamte Post-Karten-Liste neu
+  // aufbauen: renderPostList() leert container.innerHTML komplett und baut alle
+  // Karten neu, wodurch aktive Download-Zeilen ihr DOM-Element verlieren.
+  // Alle Updates (Fortschritts-Balken, Status-Icons) laufen während eines
+  // Downloads ohnehin über setRowProgress()/updatePostAggregateUI() und
+  // findRowEl() direkt auf den bestehenden DOM-Elementen - kein Rebuild nötig.
+  if (state.isDownloading) return;
+
   const container = el("postList");
   const scrollContainer = container?.closest(".content") || container;
   const posts = getFilteredPosts();

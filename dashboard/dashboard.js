@@ -3393,14 +3393,6 @@ async function downloadMany(pairs) {
       getItemSignal,
     }));
   }
-  // War der Batch (ganz oder teilweise) abgebrochen? Vorher wurde hier IMMER
-  // gruen "Download Done" gezeigt, selbst wenn per Cancel abgebrochen wurde.
-  const wasCancelled = activeCancelSignal?.cancelled || results.some((r) => r?.cancelled);
-  if (wasCancelled) {
-    await finishProgressCancelled();
-  } else {
-    await finishProgressSuccessfully();
-  }
   pairs.forEach(({ post, file }, i) => {
     const key = fileKey(post.id, file.url, file.kind || "file");
     if (results[i]?.ok) {
@@ -3413,15 +3405,11 @@ async function downloadMany(pairs) {
         if (post.video) post.video.downloaded = true;
         if (post.video?.url) updateFileDownloadStatus(post.id, post.video.url, { downloaded: true }).catch(() => {});
       } else if (file.role === "extras") {
-        // Gleiche Buchhaltung wie im Einzel-Button-Pfad (downloadPostExtras):
-        // das Post-Flag setzen, damit "Hide already downloaded" greift. NICHT
-        // updateFileDownloadStatus() mit der synthetischen `${id}::extras`-URL.
         updatePostExtrasDownloaded(post.id, true).catch(() => {});
         const localPost = state.posts.find((pp) => pp.id === post.id);
         if (localPost) localPost.extrasDownloaded = true;
       } else if (file.kind === "description" || file.role === "description" || file.kind === "comments" || file.role === "comments") {
-        // Description/Comments haben keine echte URL/Datei-DB-Zeile (synthetischer
-        // Key) - nur session-lokal ueber state.sessionDownloaded tracken, siehe oben.
+        // Description/Comments haben keine echte URL/Datei-DB-Zeile
       } else {
         if (file.url) updateFileDownloadStatus(post.id, file.url, { downloaded: true }).catch(() => {});
       }
@@ -3438,24 +3426,6 @@ async function downloadMany(pairs) {
     }
   });
 
-  // ABSCHLUSS-TOAST ZAEHLT JETZT DIESELBEN DINGE WIE DIE ECKE-ANZEIGE.
-  //
-  // Vorher wurden hier `results` (index-gleich mit den vom Nutzer ausgewaehlten
-  // Zeilen) mit `extraResults` und `embedResults` zu einer Liste verschmolzen und
-  // nur ueber die URL dedupliziert. Description/Comments benutzen aber
-  // SYNTHETISCHE URLs (`<postId>-description`, `<postId>-comments`), die mit
-  // keiner Zeilen-URL kollidieren - sie kamen also zusaetzlich obendrauf. Ergebnis
-  // beim Nutzer: 8 ausgewaehlte Dateien, Ecke zeigt korrekt 8/8, der Toast aber
-  // "8/12 downloaded, 4 skipped" - und zwar systematisch +2 pro Post, weil
-  // description und comments meistens als `skipped: true` zurueckkommen (Datei
-  // existiert schon bzw. kein Inhalt vorhanden). Das ist exakt die
-  // Doppelzaehlung, die `planDownloadSteps()` in Runde 19 als EINE Quelle
-  // beenden sollte - hier lebte die zweite, alte Rechnung noch weiter.
-  //
-  // Jetzt: Nenner und Zaehler kommen aus derselben Menge, die auch die Zeilen und
-  // die Ecke abbilden (die ausgewaehlten Items). Automatisch mitgelaufene
-  // Post-Extras zaehlen NICHT mehr in die Summe - sie tauchen nur noch auf, wenn
-  // sie tatsaechlich fehlgeschlagen sind (sonst waere ihr Fehler unsichtbar).
   const total = pairs.length;
   const downloaded = results.filter((r) => r?.ok && !r.skipped).length;
   const skipped = results.filter((r) => r?.skipped).length;
@@ -3482,10 +3452,16 @@ async function downloadMany(pairs) {
     summary += " (cancelled)";
   }
   logMilestone(`Download batch finished: ${summary}`);
-  // Sofort wegschreiben statt auf das Sammelfenster zu warten - direkt nach
-  // einem Batch schliesst der Nutzer den Tab am ehesten.
   flushAppLog().catch(() => {});
   showToast(summary);
+
+  // War der Batch (ganz oder teilweise) abgebrochen?
+  const wasCancelled = activeCancelSignal?.cancelled || results.some((r) => r?.cancelled);
+  if (wasCancelled) {
+    await finishProgressCancelled("Cancelled");
+  } else {
+    await finishProgressSuccessfully("Download completed");
+  }
 
   // Summary for externally embedded videos handled via the bridge (or link-only).
   if (embedResults && embedResults.length > 0) {

@@ -1457,7 +1457,7 @@ function renderPostList() {
     }
 
     if (hasExternal) {
-      badges.push(`<span class="badge external-files" title="Enthält externe Downloads / Links">${ICON_LINK}External Files</span>`);
+      badges.push(`<span class="badge external-files" title="Enthält externe Downloads / Links">${ICON_LINK}External File(s)</span>`);
     }
 
     const items = selectableItems(post, post.files);

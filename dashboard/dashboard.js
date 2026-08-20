@@ -245,9 +245,6 @@ function updateRowUI(key, info, targetRow = null) {
     if (info.total > 0) {
       sizeEl.textContent = formatBytes(info.total);
       sizeEl.style.display = "inline";
-    } else if (info.itemWeight > 0 && !info.empty) {
-      sizeEl.textContent = `~${formatBytes(info.itemWeight)}`;
-      sizeEl.style.display = "inline";
     } else if (info.empty && !sizeEl.textContent) {
       // Schritt ist fertig, es gibt aber keinen Byte-Wert (Description/Comments
       // ohne Inhalt bzw. bereits vorhandene Datei) - "-" statt einer
@@ -302,9 +299,6 @@ function updateRowUI(key, info, targetRow = null) {
       pct = Math.min(100, Math.round(info.pct));
       if (info.received > 0) {
         byteInfo = ` · ${formatBytes(info.received)}`;
-      } else if (info.itemWeight > 0) {
-        const estRec = Math.round((pct / 100) * info.itemWeight);
-        byteInfo = ` · ~${formatBytes(estRec)} / ~${formatBytes(info.itemWeight)}`;
       }
     }
     pct = Math.max(pct, info._lastShownPct || 0);

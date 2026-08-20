@@ -1434,7 +1434,7 @@ function renderPostList() {
     const badges = [];
     if (post.locked) badges.push(`<span class="badge locked">${ICON_LOCK}${L("locked")}</span>`);
 
-    const hasExternal = (post.files || []).some((f) => f.isCloudLink || f.isExternalLink);
+    const hasExternal = (post.files || []).length > 0;
 
     // Patreons rohe post_type-Kennung als Badge - aber nur, wo sie ueberhaupt
     // etwas beitraegt:
@@ -2880,7 +2880,11 @@ function askLargeFile(info) {
 }
 
 async function checkAndShowDenoModal(errorMsg) {
-  const storage = await chrome.storage.local.get(["denoSuggestionNeeded", "denoSuggestionDismissed"]);
+  const storage = await chrome.storage.local.get(["denoSuggestionNeeded", "denoSuggestionDismissed", "denoInstalled"]);
+  if (storage.denoInstalled) {
+    if (errorMsg && errorMsg !== "cancelled") showToast(errorMsg);
+    return false;
+  }
   if (storage.denoSuggestionNeeded && !storage.denoSuggestionDismissed) {
     el("denoModal").style.display = "flex";
     return new Promise((resolve) => {
@@ -2911,6 +2915,7 @@ async function checkAndShowDenoModal(errorMsg) {
           await installDenoViaHost((status) => {
             showProgress(status);
           });
+          await chrome.storage.local.set({ denoInstalled: true });
           hideProgress();
           showToast("Deno installed successfully!");
           resolve(true); // Signalisiert dem Aufrufer, den Download zu wiederholen!
@@ -4225,9 +4230,13 @@ async function refreshBridgeReady(forceVersionCheck = false) {
   const ping = await pingYtDlpHost(forceVersionCheck).catch(() => ({ ok: false }));
   const nowReady = !!(ping.ok && ping.ytdlpFound);
   if (nowReady) {
-    await chrome.storage.local.set({ installedBridgeVersion: ping.version || "1.0.0" });
+    await chrome.storage.local.set({
+      installedBridgeVersion: ping.version || "1.0.0",
+      bridgeYtdlpVersion: ping.version || "1.0.0",
+      denoInstalled: !!ping.denoFound,
+    });
   } else {
-    await chrome.storage.local.remove("installedBridgeVersion");
+    await chrome.storage.local.remove(["installedBridgeVersion", "bridgeYtdlpVersion"]);
   }
   if (nowReady !== state.bridgeReady) {
     // Nur den WECHSEL protokollieren, nicht jeden 60s-Ping - sonst besteht das
@@ -4506,7 +4515,10 @@ async function checkAndRenderUpdateBanners() {
       "dismissedBridgeVersion",
       "installedBridgeVersion",
       "bridgeChangelog",
-      "bridgeReleaseUrl"
+      "bridgeReleaseUrl",
+      "latestYtdlpVersion",
+      "bridgeYtdlpVersion",
+      "dismissedYtdlpVersion"
     ]);
 
     const container = document.getElementById("updateBannerContainer");
@@ -4595,6 +4607,50 @@ async function checkAndRenderUpdateBanners() {
       });
     }
 
+    // 3. yt-dlp Video Engine Update Banner
+    if (
+      data.latestYtdlpVersion &&
+      data.bridgeYtdlpVersion &&
+      data.latestYtdlpVersion !== data.dismissedYtdlpVersion &&
+      isVersionOlder(data.bridgeYtdlpVersion, data.latestYtdlpVersion)
+    ) {
+      showAny = true;
+      const banner = document.createElement("div");
+      banner.className = "update-banner ytdlp-update";
+      banner.innerHTML = `
+        <svg class="update-banner-icon rotating-gear" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <div class="update-banner-content">
+          <h4 class="update-banner-title">${isEn ? `Video Engine (yt-dlp) update available (${data.latestYtdlpVersion})` : `Update für Video-Engine (yt-dlp) verfügbar (${data.latestYtdlpVersion})`}</h4>
+          <p class="update-banner-desc">${isEn ? `A newer video engine version (${data.latestYtdlpVersion}) is available. Updating is recommended to fix YouTube/video downloads.` : `Eine neuere yt-dlp Version (${data.latestYtdlpVersion}) ist verfügbar. Ein Update wird empfohlen, um Video-Downloads stabil zu halten.`}</p>
+        </div>
+        <div class="update-banner-buttons">
+          <button class="update-banner-btn action-btn" id="runYtdlpUpdateBtn">${isEn ? "Update Video Engine" : "Video-Engine aktualisieren"}</button>
+          <button class="update-banner-btn" id="dismissYtdlpUpdateBtn">${isEn ? "Got it" : "Verstanden"}</button>
+        </div>
+      `;
+      container.appendChild(banner);
+
+      banner.querySelector("#runYtdlpUpdateBtn").addEventListener("click", async () => {
+        showProgress("Updating video engine (yt-dlp)...");
+        try {
+          await installYtDlpViaHost((status) => showProgress(status));
+          await refreshBridgeReady(true);
+          hideProgress();
+          showToast("Video engine updated successfully!");
+        } catch (err) {
+          hideProgress();
+          showToast(`Update failed: ${err.message}`);
+        }
+      });
+
+      banner.querySelector("#dismissYtdlpUpdateBtn").addEventListener("click", async () => {
+        await chrome.storage.local.set({ dismissedYtdlpVersion: data.latestYtdlpVersion });
+        checkAndRenderUpdateBanners();
+      });
+    }
+
     container.style.display = showAny ? "flex" : "none";
   } finally {
     isRenderingBanners = false;
@@ -4603,7 +4659,15 @@ async function checkAndRenderUpdateBanners() {
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local") {
-    if (changes.latestBridgeVersion || changes.dismissedBridgeVersion || changes.installedBridgeVersion || changes.showExtensionUpdate) {
+    if (
+      changes.latestBridgeVersion ||
+      changes.dismissedBridgeVersion ||
+      changes.installedBridgeVersion ||
+      changes.latestYtdlpVersion ||
+      changes.bridgeYtdlpVersion ||
+      changes.dismissedYtdlpVersion ||
+      changes.showExtensionUpdate
+    ) {
       checkAndRenderUpdateBanners().catch(console.error);
     }
   }

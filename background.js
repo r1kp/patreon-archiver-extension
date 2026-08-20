@@ -380,11 +380,13 @@ chrome.runtime.onInstalled.addListener((details) => {
   applyActionIcon();
   setupAlarms();
   checkBridgeUpdate();
+  checkYtdlpUpdate();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   setupAlarms();
   checkBridgeUpdate();
+  checkYtdlpUpdate();
 });
 
 function setupAlarms() {
@@ -396,6 +398,7 @@ function setupAlarms() {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === CHECK_BRIDGE_UPDATE_ALARM) {
     checkBridgeUpdate();
+    checkYtdlpUpdate();
   }
 });
 
@@ -727,6 +730,21 @@ async function checkBridgeUpdate() {
     updateBadge();
   } catch (err) {
     console.warn("Failed to check for bridge update:", err);
+  }
+}
+
+async function checkYtdlpUpdate() {
+  try {
+    const res = await fetch("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const latestVersion = (data.tag_name || "").replace(/^v/, "");
+    await chrome.storage.local.set({
+      latestYtdlpVersion: latestVersion,
+      lastYtdlpUpdateCheck: Date.now(),
+    });
+  } catch (err) {
+    console.warn("Failed to check for yt-dlp update:", err);
   }
 }
 

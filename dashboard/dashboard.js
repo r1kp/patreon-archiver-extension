@@ -679,6 +679,8 @@ function updatePostAggregateUI(postId) {
   const pct = Math.min(99, Math.round(smoothedPct));
   setAggFillWidth(fillEl, pct);
 
+  const settledCount = entries.length - stillGoing.length;
+
   const trackEl = aggEl.querySelector(".post-agg-track");
   if (trackEl) {
     if (scanningCount > 0) {

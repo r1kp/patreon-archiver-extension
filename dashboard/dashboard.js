@@ -640,18 +640,31 @@ function updatePostAggregateUI(postId) {
   let finishedCount = 0;
   let activeProgressSum = 0;
   let scanningCount = 0;
+  let sumBytesReceived = 0;
+  let sumBytesTotal = 0;
 
   entries.forEach((v) => {
-    if (v.status === "done" || v.status === "error" || v.status === "cancelled") {
+    const itemWeight = rowWeight(v);
+    if (v.status === "done") {
       finishedCount += 1;
+      sumBytesReceived += itemWeight;
+      sumBytesTotal += itemWeight;
+    } else if (v.status === "error" || v.status === "cancelled") {
+      finishedCount += 1;
+      sumBytesTotal += itemWeight;
     } else if (v.status === "active") {
       const rec = rowReceived(v);
-      const tot = rowTotal(v) || rowWeight(v);
+      const tot = rowTotal(v) || itemWeight;
       if (tot > 0 && rec > 0) {
         activeProgressSum += Math.min(1, rec / tot);
       }
+      sumBytesReceived += Math.min(itemWeight, rec);
+      sumBytesTotal += itemWeight;
     } else if (v.status === "scanning") {
       if (isSizingRow(v)) scanningCount++;
+      sumBytesTotal += itemWeight;
+    } else {
+      sumBytesTotal += itemWeight;
     }
   });
 
@@ -4409,6 +4422,8 @@ async function init() {
   // Dashboard-Öffnen zusätzlich noch "yt-dlp --version" auszuführen - das
   // hat spürbar zur Verzögerung beigetragen. Ein voller Versions-Recheck
   // passiert weiterhin regelmäßig über den 60s-Intervall-Timer.
+  refreshBridgeReady(false);
+
   // Membership modal listeners
   el("membershipModalClose")?.addEventListener("click", () => {
     el("membershipModal").style.display = "none";

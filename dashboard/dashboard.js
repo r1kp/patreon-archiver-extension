@@ -397,6 +397,11 @@ function rowReceived(v) {
   return 0;
 }
 
+function rowTotal(v) {
+  if (v?.total > 0) return v.total;
+  return rowWeight(v);
+}
+
 function isRowLive(v) {
   return v?.status === "active" || v?.status === "queued" || v?.status === "scanning";
 }

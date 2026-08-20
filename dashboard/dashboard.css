@@ -448,10 +448,10 @@ body {
    auf einen Blick erkennbar sein. */
 .row-progress-fill.row-progress-waiting {
   width: 100% !important;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
+  background: linear-gradient(90deg, #2a2a35 0%, #606070 50%, #2a2a35 100%) !important;
   background-size: 200% 100% !important;
-  animation: waitingPulse 2.8s infinite ease-in-out !important;
-  opacity: 1 !important;
+  animation: waitingPulse 2.4s infinite ease-in-out !important;
+  opacity: 0.9 !important;
 }
 .row-progress-fill.row-progress-scanning {
   width: 100% !important;
@@ -523,9 +523,9 @@ body {
   animation: scanningShimmer 1.2s infinite linear !important;
 }
 .post-agg-track.waiting {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
+  background: linear-gradient(90deg, #2a2a35 0%, #606070 50%, #2a2a35 100%) !important;
   background-size: 200% 100% !important;
-  animation: waitingPulse 2.8s infinite ease-in-out !important;
+  animation: waitingPulse 2.4s infinite ease-in-out !important;
 }
 .post-agg-fill {
   height: 100%; width: 0%; background: var(--accent);
@@ -557,9 +557,9 @@ body {
 
 /* Settings modal */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(8,8,10,.55); display: flex;
+  position: fixed; inset: 0; background: rgba(10, 10, 14, 0.35); display: flex;
   align-items: center; justify-content: center; z-index: 1200;
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
 }
 @keyframes modalScaleIn {
   from { opacity: 0; transform: scale(0.96); }
@@ -567,22 +567,19 @@ body {
 }
 .modal {
   width: 520px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
-  background: rgba(20, 20, 26, 0.88);
+  background: rgba(20, 20, 26, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl); padding: 24px 28px 0px;
   backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(0, 0, 0, 0.25), 0 0 1px rgba(255, 255, 255, 0.15);
   animation: modalScaleIn 0.18s var(--ease);
   position: relative;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-  scrollbar-gutter: stable;
 }
 .modal::-webkit-scrollbar {
   width: 6px;
 }
 .modal::-webkit-scrollbar-track {
   background: transparent;
-  margin: 12px 0;
+  margin: 14px 0;
 }
 .modal::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
@@ -590,6 +587,11 @@ body {
 }
 .modal::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35);
+}
+.modal::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
 .modal-header h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
@@ -620,11 +622,17 @@ body {
   display: flex; justify-content: flex-end;
   position: sticky; bottom: 0; left: 0; right: 0;
   margin-left: -28px; margin-right: -28px;
-  padding: 16px 28px 20px;
-  background: linear-gradient(to top, rgba(20, 20, 26, 0.96) 65%, rgba(20, 20, 26, 0) 100%);
+  padding: 20px 28px 20px;
+  background: linear-gradient(to top, rgba(20, 20, 26, 0.98) 55%, rgba(20, 20, 26, 0) 100%);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  mask-image: linear-gradient(to top, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 70%, transparent 100%);
   border-top: none;
   z-index: 10;
+  pointer-events: none;
+}
+.modal-footer > * {
+  pointer-events: auto;
 }
 /* Custom Storage Selection Cards */
 .storage-selector {

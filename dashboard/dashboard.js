@@ -2813,6 +2813,9 @@ function showDashboardCancelModal() {
   modal.querySelector("#dashModalYes").onclick = () => {
     modal.remove();
     if (activeCancelSignal) activeCancelSignal.cancelled = true;
+    state.itemCancelSignals.forEach((sig) => {
+      if (sig) sig.cancelled = true;
+    });
     el("progressLabel").textContent = "Cancelling...";
     el("progressCancel").disabled = true;
     el("progressFill").classList.remove("done-flash", "error");

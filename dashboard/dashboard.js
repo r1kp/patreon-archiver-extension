@@ -3032,6 +3032,14 @@ async function downloadThumbnail(post) {
     await flashPrimaryError();
     showToast(L("toastError", "Thumbnail", r?.error));
     finalizeRow(thumbKey, "error");
+    const classified = classifyDownloadError(r?.error, "Thumbnail");
+    if (classified) {
+      pushDownloadWarning({
+        ...classified,
+        postTitle: post.title,
+        filename: `${post.title} - Thumbnail`,
+      });
+    }
   }
 }
 
@@ -3063,6 +3071,14 @@ async function downloadNativeVideo(post) {
     await flashPrimaryError();
     showToast(L("toastError", "Video", r?.error));
     finalizeRow(videoKey, "error");
+    const classified = classifyDownloadError(r?.error, "Video");
+    if (classified) {
+      pushDownloadWarning({
+        ...classified,
+        postTitle: post.title,
+        filename: `${post.title} - Video`,
+      });
+    }
   }
 }
 
@@ -3466,6 +3482,27 @@ async function downloadMany(pairs) {
     await finishProgressCancelled("Cancelled");
   } else {
     await finishProgressSuccessfully("Download completed");
+  }
+
+  if (embedResults && embedResults.length > 0) {
+    embedResults.forEach((er) => {
+      if (!er.ok && !er.cancelled && !er.skipped && er.error) {
+        const classified = classifyDownloadError(er.error, "Video");
+        if (classified) {
+          pushDownloadWarning({ ...classified, postTitle: er.title || "Video", filename: `${er.title || "Video"} - Video` });
+        }
+      }
+    });
+  }
+  if (extraResults && extraResults.length > 0) {
+    extraResults.forEach((xr) => {
+      if (!xr.ok && !xr.cancelled && !xr.skipped && xr.error) {
+        const classified = classifyDownloadError(xr.error, "Media");
+        if (classified) {
+          pushDownloadWarning({ ...classified, postTitle: "Post Media", filename: xr.url || "Media File" });
+        }
+      }
+    });
   }
 
   // Summary for externally embedded videos handled via the bridge (or link-only).

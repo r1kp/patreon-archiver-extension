@@ -510,30 +510,30 @@ body {
 .post-agg-progress { display: none; align-items: center; gap: 8px; margin: 8px 0 0; }
 .post-agg-track {
   flex: 1; height: 4px; border-radius: 2px; background: var(--bg-card); overflow: hidden;
+  position: relative;
 }
-.post-agg-fill { height: 100%; width: 0%; background: var(--accent); transition: width .25s ease, background .25s ease; }
+.post-agg-track.scanning {
+  background: linear-gradient(90deg, #25252e 0%, #d1d5db 50%, #25252e 100%) !important;
+  background-size: 200% 100% !important;
+  animation: scanningShimmer 1.4s infinite linear !important;
+}
+.post-agg-track.waiting {
+  background: linear-gradient(90deg, #1c1c24 0%, #30303c 50%, #1c1c24 100%) !important;
+  background-size: 200% 100% !important;
+  animation: waitingPulse 2.8s infinite ease-in-out !important;
+}
+.post-agg-fill {
+  height: 100%; width: 0%; background: var(--accent);
+  transition: width .25s ease, background .25s ease;
+  position: relative;
+  z-index: 1;
+}
 .post-agg-fill.post-agg-done { background: var(--green); }
 .post-agg-fill.post-agg-error {
   background: #ff1744 !important;
   box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
 }
 .post-agg-fill.post-agg-cancelled { background: var(--warn); }
-/* Anbieter ermittelt gerade noch die echte Groesse (Drive-Baumscan, MEGA-
-   Ordnerliste): Balken behaelt seine echte Breite, bekommt aber denselben
-   wandernden Schimmer wie die Einzelzeile - "arbeitet, Dauer/Groesse noch
-   unbekannt", statt still auf einem falschen Prozentwert zu stehen.
-   background-image kommt per Inline-Style aus updatePostAggregateUI(). */
-.post-agg-fill.post-agg-scanning {
-  background: linear-gradient(90deg, #25252e 0%, #d1d5db 50%, #25252e 100%) !important;
-  background-size: 200% 100% !important;
-  animation: scanningShimmer 1.4s infinite linear !important;
-}
-.post-agg-fill.post-agg-waiting {
-  background: linear-gradient(90deg, #1c1c24 0%, #30303c 50%, #1c1c24 100%) !important;
-  background-size: 200% 100% !important;
-  animation: waitingPulse 2.8s infinite ease-in-out !important;
-  opacity: .8;
-}
 .post-agg-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
 .post-card.expanded .post-card-text,
 .post-card.expanded .file-list { display: flex; }

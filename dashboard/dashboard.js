@@ -171,13 +171,11 @@ function findRowEl(key) {
 // daraus der passende Zeilen-Key + ein Cancel-Signal-Objekt gebaut/wiederverwendet.
 function getItemSignal({ postId, url, kind }) {
   const key = fileKey(postId, url, kind || "file");
-  // Immer FRISCH anlegen (nicht ein evtl. bereits abgebrochenes altes Signal
-  // wiederverwenden) - downloader.js ruft das genau einmal pro echtem neuen
-  // Download-Versuch auf, daher ist "ueberschreiben" hier sicher und noetig:
-  // sonst wuerde ein Retry desselben Items sofort als "cancelled" gelten, weil
-  // der User es beim vorherigen Versuch abgebrochen hatte.
-  const signal = { cancelled: false };
-  state.itemCancelSignals.set(key, signal);
+  let signal = state.itemCancelSignals.get(key);
+  if (!signal) {
+    signal = { cancelled: false };
+    state.itemCancelSignals.set(key, signal);
+  }
   return signal;
 }
 
@@ -681,17 +679,19 @@ function updatePostAggregateUI(postId) {
   const pct = Math.min(99, Math.round(smoothedPct));
   setAggFillWidth(fillEl, pct);
 
-  const settledCount = entries.length - stillGoing.length;
-
-  if (scanningCount > 0) {
-    fillEl.classList.remove("post-agg-waiting");
-    fillEl.classList.add("post-agg-scanning");
-  } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
-    fillEl.classList.remove("post-agg-scanning");
-    fillEl.classList.add("post-agg-waiting");
-  } else {
-    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
+  const trackEl = aggEl.querySelector(".post-agg-track");
+  if (trackEl) {
+    if (scanningCount > 0) {
+      trackEl.classList.remove("waiting");
+      trackEl.classList.add("scanning");
+    } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
+      trackEl.classList.remove("scanning");
+      trackEl.classList.add("waiting");
+    } else {
+      trackEl.classList.remove("scanning", "waiting");
+    }
   }
+  fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
 
   if (textEl) {
     const parts = [`${settledCount}/${entries.length}`, `${pct}%`];
@@ -1734,9 +1734,15 @@ function renderPostList() {
         });
         row.querySelector(".fdl-btn").addEventListener("click", () => {
           const info = state.activeDownloads.get(r.key);
-          if (info && (info.status === "active" || info.status === "queued")) {
-            const sig = state.itemCancelSignals.get(r.key);
-            if (sig) sig.cancelled = true;
+          if (info && (info.status === "active" || info.status === "queued" || info.status === "scanning")) {
+            let sig = state.itemCancelSignals.get(r.key);
+            if (!sig) {
+              sig = { cancelled: true };
+              state.itemCancelSignals.set(r.key, sig);
+            } else {
+              sig.cancelled = true;
+            }
+            setRowProgress(r.key, { status: "cancelled", postId: post.id });
             return;
           }
           r.onDownload();

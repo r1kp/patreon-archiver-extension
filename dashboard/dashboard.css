@@ -69,8 +69,8 @@ body {
 
 /* Premium Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -84,6 +84,11 @@ body {
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Sidebar */
@@ -443,14 +448,14 @@ body {
    auf einen Blick erkennbar sein. */
 .row-progress-fill.row-progress-waiting {
   width: 100% !important;
-  background: linear-gradient(90deg, rgba(245, 166, 35, 0.08) 0%, rgba(245, 166, 35, 0.38) 50%, rgba(245, 166, 35, 0.08) 100%) !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
   background-size: 200% 100% !important;
-  animation: waitingPulse 2.2s infinite ease-in-out !important;
+  animation: waitingPulse 2.8s infinite ease-in-out !important;
   opacity: 1 !important;
 }
 .row-progress-fill.row-progress-scanning {
   width: 100% !important;
-  background: linear-gradient(90deg, #25252e 0%, #ffffff 50%, #25252e 100%) !important;
+  background: linear-gradient(90deg, #1e3a8a 0%, #38bdf8 50%, #1e3a8a 100%) !important;
   background-size: 200% 100% !important;
   animation: scanningShimmer 1.2s infinite linear !important;
 }
@@ -513,14 +518,14 @@ body {
   position: relative;
 }
 .post-agg-track.scanning {
-  background: linear-gradient(90deg, #25252e 0%, #ffffff 50%, #25252e 100%) !important;
+  background: linear-gradient(90deg, #1e3a8a 0%, #38bdf8 50%, #1e3a8a 100%) !important;
   background-size: 200% 100% !important;
   animation: scanningShimmer 1.2s infinite linear !important;
 }
 .post-agg-track.waiting {
-  background: linear-gradient(90deg, rgba(245, 166, 35, 0.08) 0%, rgba(245, 166, 35, 0.38) 50%, rgba(245, 166, 35, 0.08) 100%) !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
   background-size: 200% 100% !important;
-  animation: waitingPulse 2.2s infinite ease-in-out !important;
+  animation: waitingPulse 2.8s infinite ease-in-out !important;
 }
 .post-agg-fill {
   height: 100%; width: 0%; background: var(--accent);
@@ -563,7 +568,7 @@ body {
 .modal {
   width: 520px; max-width: 92vw; max-height: 85vh; overflow-y: auto;
   background: rgba(20, 20, 26, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl); padding: 24px 28px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-xl); padding: 24px 28px 0px;
   backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.2);
   animation: modalScaleIn 0.18s var(--ease);
@@ -598,7 +603,7 @@ body {
   margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px;
 }
 .modal-section:last-of-type {
-  border-bottom: none; padding-bottom: 0; margin-bottom: 8px;
+  border-bottom: none; padding-bottom: 12px; margin-bottom: 0;
 }
 .modal-section > label { display: block; font-size: 13px; color: var(--text); margin-bottom: 10px; font-weight: 700; }
 .modal-section input[type="text"] {
@@ -612,9 +617,13 @@ body {
 .hint { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; margin: 8px 0 0; }
 .chosen-folder { font-size: 12px; color: var(--green); font-weight: 500; }
 .modal-footer {
-  display: flex; justify-content: flex-end; margin-top: 16px;
-  position: sticky; bottom: -20px; background: var(--glass-bg-strong);
-  padding: 14px 0 4px 0; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+  position: sticky; bottom: 0; left: 0; right: 0;
+  margin-left: -28px; margin-right: -28px;
+  padding: 16px 28px 20px;
+  background: linear-gradient(to top, rgba(20, 20, 26, 0.96) 65%, rgba(20, 20, 26, 0) 100%);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: none;
   z-index: 10;
 }
 /* Custom Storage Selection Cards */
@@ -1192,25 +1201,6 @@ body {
   padding: 9px 12px; color: var(--text); font-size: 13px; outline: none;
 }
 .modal-section input[type="number"]:focus { border-color: var(--accent); }
-
-/* Custom Modern Scrollbars */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3e3e4a;
-}
-::-webkit-scrollbar-corner {
-  background: var(--bg);
-}
 
 /* Custom Select Dropdowns */
 .custom-select-ui {

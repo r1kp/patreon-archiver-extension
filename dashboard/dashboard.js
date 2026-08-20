@@ -298,26 +298,25 @@ function updateRowUI(key, info, targetRow = null) {
       pct = Math.min(100, Math.round((info.received / info.total) * 100));
       byteInfo = ` · ${formatBytes(info.received)} / ${formatBytes(info.total)}`;
     } else if (info.pct != null) {
-      // Kein Byte-Wert bekannt (z.B. yt-dlp-Embed-Video meldet nur Prozent) -
-      // trotzdem eine sinnvolle Bar zeigen statt "0%/leer".
       pct = Math.min(100, Math.round(info.pct));
-      // Bei grossen Cloud-Ordnern ist zwar die Gesamtgroesse unbekannt, die
-      // bereits uebertragene Menge aber sehr wohl - dann wenigstens DIE zeigen
-      // ("42% · 1.2 GB") statt einer nackten Prozentzahl.
       if (info.received > 0) byteInfo = ` · ${formatBytes(info.received)}`;
     }
-    // Balken darf nie rueckwaerts springen - kleine Schwankungen in den
-    // Rohdaten (Datei-Wechsel in einem Cloud-Ordner, nachtraeglich
-    // korrigierte Gesamtgroesse mittendrin) sollen nicht wie ein Ruckler
-    // wirken. info ist dieselbe Objektreferenz wie in state.activeDownloads,
-    // die Mutation hier bleibt also fuer den naechsten Tick erhalten. Der
-    // geclampte Wert wird auch in der Prozent-Textanzeige verwendet, damit
-    // Balkenbreite und Text nie auseinanderlaufen.
     pct = Math.max(pct, info._lastShownPct || 0);
     info._lastShownPct = pct;
     fillEl.style.width = `${pct}%`;
-    fillEl.className = "row-progress-fill";
-    textEl.textContent = `${pct}%${byteInfo}`;
+
+    if (info.phase === "merging" || info.phase === "merger") {
+      fillEl.className = "row-progress-fill row-progress-merging";
+      textEl.textContent = `Merging (${pct}%)...`;
+    } else if (info.phase === "audio") {
+      fillEl.className = "row-progress-fill";
+      const speedStr = info.speed ? ` · ${info.speed}` : "";
+      textEl.textContent = `${pct}% · Audio${speedStr}${byteInfo}`;
+    } else {
+      fillEl.className = "row-progress-fill";
+      const speedStr = info.speed ? ` · ${info.speed}` : "";
+      textEl.textContent = `${pct}%${speedStr}${byteInfo}`;
+    }
     btn.textContent = L("cancel");
     btn.classList.add("row-cancel-btn");
     return;
@@ -680,11 +679,11 @@ function updatePostAggregateUI(postId) {
     }
   });
 
-  // Byte-gewichteter Fortschritt statt bloßer Item-Anzahl:
-  // Verhindert, dass die Leiste auf 75% springt, nur weil Description + Thumbnail (wenige KB)
-  // in 100ms fertig sind, während das Video (250MB+) noch lädt!
-  const byteRatio = sumBytesTotal > 0 ? (sumBytesReceived / sumBytesTotal) : (totalEntries > 0 ? (finishedCount + activeProgressSum) / totalEntries : 0);
-  const rawPct = Math.min(100, byteRatio * 100);
+  // Hybrider Fortschritt:
+  // Jedes fertiggestellte Item rückt den Balken spürbar vor (finishedCount / totalEntries),
+  // und aktive Streams (Videos, Cloud-Files) animieren ihren jeweiligen Anteil (activeProgressSum / totalEntries).
+  const liveRatio = totalEntries > 0 ? (finishedCount + activeProgressSum) / totalEntries : 0;
+  const rawPct = Math.min(100, liveRatio * 100);
 
   let anchor = state.postAggPct.get(postId);
   if (!anchor || typeof anchor !== "object" || anchor.finished) anchor = newProgressAnchor();
@@ -694,16 +693,27 @@ function updatePostAggregateUI(postId) {
   const pct = Math.min(99, Math.round(smoothedPct));
   setAggFillWidth(fillEl, pct);
 
+  const settledCount = entries.length - stillGoing.length;
+
   if (scanningCount > 0) {
+    fillEl.classList.remove("post-agg-waiting", "post-agg-merging");
     fillEl.classList.add("post-agg-scanning");
     fillEl.style.backgroundImage =
       "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.45) 50%, rgba(255,255,255,0) 100%)";
+  } else if (mergingCount > 0) {
+    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
+    fillEl.classList.add("post-agg-merging");
+    fillEl.style.backgroundImage = "none";
+  } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
+    fillEl.classList.remove("post-agg-scanning", "post-agg-merging");
+    fillEl.classList.add("post-agg-waiting");
+    fillEl.style.backgroundImage = "none";
   } else {
-    fillEl.classList.remove("post-agg-scanning");
+    fillEl.classList.remove("post-agg-scanning", "post-agg-waiting", "post-agg-merging");
     fillEl.style.backgroundImage = "none";
   }
+
   if (textEl) {
-    const settledCount = entries.length - stillGoing.length;
     const parts = [`${settledCount}/${entries.length}`, `${pct}%`];
     if (sumBytesTotal > 0) {
       // "~" markiert eine noch geschaetzte Gesamtgroesse - ehrlicher als eine
@@ -712,11 +722,11 @@ function updatePostAggregateUI(postId) {
       parts.push(`${formatBytes(sumBytesReceived)} / ${approx ? "~" : ""}${formatBytes(sumBytesTotal)}`);
     }
     if (mergingCount > 0) {
-      parts.push("Merging...");
+      parts.push("Merging video...");
     } else if (scanningCount > 0) {
       parts.push(L("scanning"));
     } else if (waitingCount > 0 && settledCount === 0 && !entries.some(v => v.status === "active")) {
-      parts.push("Waiting...");
+      parts.push("Waiting in queue...");
     }
     textEl.textContent = parts.join(" · ");
   }
@@ -2728,31 +2738,23 @@ function updateStepProgress(done, total, label, meta = {}) {
   // kommen aus downloader.js' reportStep()-Aufrufen. pctMatch deckt hier vor
   // allem das yt-dlp-Embed-Video ab (liefert nur Prozent, keine rohen Bytes).
   if (meta.postId != null && meta.url) {
-    let rowStatus = "active";
+    let rowStatus = meta.status || "active";
     if (fileDetailPart && fileDetailPart.includes("(cancelled)")) {
       rowStatus = "cancelled";
     } else if (meta.error || (fileDetailPart && fileDetailPart.includes("(error)"))) {
       rowStatus = "error";
     } else if (fileDetailPart && (fileDetailPart.includes("(done)") || fileDetailPart.includes("(skipped)") || fileDetailPart.includes("(100%)"))) {
-      // "(100%)" deckt das Embed-Video-Ende ab (dessen finaler reportStep()-
-      // Aufruf in downloader.js immer "Video (100%)" heisst, nie "(done)") -
-      // ohne das blieb die Zeile bei Bulk-Batches bis zum Ende des GESAMTEN
-      // Batches auf "active" haengen, statt sofort nach diesem einen Item.
       rowStatus = "done";
-    } else if (meta.phase === "working") {
+    } else if (meta.phase === "scanning" || meta.phase === "working" || (fileDetailPart && fileDetailPart.includes("Scanning..."))) {
       rowStatus = "scanning";
     }
 
     const rowPatch = { status: rowStatus, postId: meta.postId };
-    // Eingeplantes Gewicht dieses Items mitfuehren (echte sizeBytes bzw.
-    // SIZE_ESTIMATE.* aus downloader.js) - die Aggregat-Anzeigen brauchen es,
-    // solange die echte Groesse noch nicht bekannt ist (siehe rowWeight()).
+    if (meta.phase) rowPatch.phase = meta.phase;
+    if (meta.speed) rowPatch.speed = meta.speed;
     const plannedWeight = meta.weight || meta.currentStepWeight;
     if (plannedWeight > 0) rowPatch.itemWeight = plannedWeight;
-    // meta.sizeBytes kommt vom yt-dlp-Groessen-Parser (siehe videoProgress.js) -
-    // wenn bekannt, echte Byte-Werte statt reiner Prozentzahl nutzen (MB/GB-
-    // Anzeige + Grundlage fuer die Groessen-Anzeige nach Abschluss, siehe
-    // renderPostList()'s sizeStr-Fallback).
+
     if (rowStatus === "done") {
       rowPatch.pct = 100;
       if (meta.sizeBytes > 0) {
@@ -2764,11 +2766,13 @@ function updateStepProgress(done, total, label, meta = {}) {
       } else if (meta.empty) {
         rowPatch.empty = true;
       }
-    } else if (meta.sizeBytes > 0 && pctMatch) {
+    } else if (meta.sizeBytes > 0 && (pctMatch || meta.pct != null)) {
+      const pVal = meta.pct != null ? meta.pct : filePct;
       rowPatch.total = meta.sizeBytes;
-      rowPatch.received = Math.round((filePct / 100) * meta.sizeBytes);
-    } else if (pctMatch) {
-      rowPatch.pct = filePct;
+      rowPatch.received = Math.round((pVal / 100) * meta.sizeBytes);
+      rowPatch.pct = pVal;
+    } else if (pctMatch || meta.pct != null) {
+      rowPatch.pct = meta.pct != null ? meta.pct : filePct;
     }
     setRowProgress(fileKey(meta.postId, meta.url, meta.itemKind || "file"), rowPatch);
   }

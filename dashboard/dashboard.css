@@ -454,6 +454,12 @@ body {
   background-size: 200% 100%;
   animation: scanningShimmer 1.5s infinite linear;
 }
+.row-progress-fill.row-progress-merging {
+  width: 100% !important;
+  background: linear-gradient(90deg, #3730a3 0%, #818cf8 50%, #3730a3 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 1.8s infinite linear;
+}
 
 @keyframes scanningShimmer {
   0% { background-position: 200% 0; }
@@ -522,6 +528,17 @@ body {
 .post-agg-fill.post-agg-scanning {
   background-size: 200% 100%;
   animation: scanningShimmer 1.5s infinite linear;
+}
+.post-agg-fill.post-agg-waiting {
+  background: linear-gradient(90deg, #23232b 0%, #3a3a46 50%, #23232b 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 2.6s infinite linear;
+  opacity: .75;
+}
+.post-agg-fill.post-agg-merging {
+  background: linear-gradient(90deg, #3730a3 0%, #818cf8 50%, #3730a3 100%);
+  background-size: 200% 100%;
+  animation: scanningShimmer 1.8s infinite linear;
 }
 .post-agg-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
 .post-card.expanded .post-card-text,

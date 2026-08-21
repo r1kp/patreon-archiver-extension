@@ -539,6 +539,19 @@ body {
   box-shadow: 0 0 8px rgba(255, 23, 68, 0.6);
 }
 .post-agg-fill.post-agg-cancelled { background: var(--warn); }
+.post-agg-fill.post-agg-scanning {
+  width: 100% !important;
+  background: linear-gradient(90deg, #1e3a8a 0%, #38bdf8 50%, #1e3a8a 100%) !important;
+  background-size: 200% 100% !important;
+  animation: scanningShimmer 1.2s infinite linear !important;
+}
+.post-agg-fill.post-agg-waiting {
+  width: 100% !important;
+  background: linear-gradient(90deg, #2a2a35 0%, #606070 50%, #2a2a35 100%) !important;
+  background-size: 200% 100% !important;
+  animation: waitingPulse 2.4s infinite ease-in-out !important;
+  opacity: 0.9 !important;
+}
 .post-agg-text { font-size: 10.5px; color: var(--text-dim); white-space: nowrap; }
 .post-card.expanded .post-card-text,
 .post-card.expanded .file-list { display: flex; }

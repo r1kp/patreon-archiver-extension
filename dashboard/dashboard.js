@@ -703,7 +703,19 @@ function updatePostAggregateUI(postId) {
       trackEl.classList.remove("scanning", "waiting");
     }
   }
-  fillEl.classList.remove("post-agg-scanning", "post-agg-waiting");
+
+  if (settledCount === 0 && scanningCount > 0 && !entries.some(v => v.status === "active")) {
+    fillEl.className = "post-agg-fill post-agg-scanning";
+    fillEl.style.width = "100%";
+    fillEl.style.backgroundColor = "transparent";
+  } else if (settledCount === 0 && waitingCount > 0 && !entries.some(v => v.status === "active" || v.status === "scanning")) {
+    fillEl.className = "post-agg-fill post-agg-waiting";
+    fillEl.style.width = "100%";
+    fillEl.style.backgroundColor = "transparent";
+  } else {
+    fillEl.className = "post-agg-fill";
+    setAggFillWidth(fillEl, pct);
+  }
 
   if (textEl) {
     const parts = [`${settledCount}/${entries.length}`, `${pct}%`];

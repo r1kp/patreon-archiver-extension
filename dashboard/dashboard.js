@@ -143,6 +143,8 @@ function fileKey(postId, fileUrl, kindOrRole = "") {
 const ICON_LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>`;
 const ICON_LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
 const ICON_VIDEO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`;
+const ICON_IMAGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
+const ICON_AUDIO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
 
 // ---------- Inline-Progress pro Zeile/Post-Karte (Variante 3 des Umbaus) ----------
 // Ersetzt das alte Modell "ein Item nach dem anderen, ein globaler Balken" -
@@ -1466,6 +1468,16 @@ function renderPostList() {
 
     if (post.video) {
       badges.push(`<span class="badge video-files" title="Enthält Video">${ICON_VIDEO}Video File(s)</span>`);
+    }
+
+    const hasAudio = post.postType === "audio_embed" || (post.files || []).some((f) => f.kind === "audio" || /\.(mp3|wav|flac|m4a|aac|ogg)$/i.test(f.filename || f.url));
+    if (hasAudio) {
+      badges.push(`<span class="badge audio-files" title="Enthält Audio">${ICON_AUDIO}Audio File(s)</span>`);
+    }
+
+    const hasImages = post.postType === "image_file" || (post.files || []).some((f) => f.kind === "image" || /\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(f.filename || f.url));
+    if (hasImages) {
+      badges.push(`<span class="badge image-files" title="Enthält Bilder">${ICON_IMAGE}Image File(s)</span>`);
     }
 
     const internalPostTypes = [

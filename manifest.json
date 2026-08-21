@@ -3,6 +3,7 @@
   "name": "Patreon Archiver",
   "version": "1.0.0",
   "description": "Downloads text, images, videos, and attachments in an organized, structured format.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkX4/yiQ5oT9SaHQX6hTF9wXJUqHmM9wy9bFPETdYtEGzW8RcRDbTSpdDbHDvoF2+PKGB5f6CfP67xPsxHtxtdWWi9Oq30Sh48BJYGnotXVo6SHKEyHxib2oRFQaELhpJ7Jk89dA3pdlj9J1W735rP427Mokc54XGDBOx0Bvx7ruUHGdXKYmg5RIQ6egMM9lIDi18J9655R87IQ6Can8jCUM/NQm1EAvs4TdAoEvN5sS49ROdwFR14nvzqBr+Z+IjQ/5ybSQkx+j41RtYtchK/B3mc+faKu52vg2BQ71pu2piMx90YcYsPhjSb7TatEzUhZ6QbXZLyFkSNWcEdQ0cAwIDAQAB",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

@@ -1470,26 +1470,28 @@ function renderPostList() {
       badges.push(`<span class="badge video-files" title="Enthält Video">${ICON_VIDEO}Video File(s)</span>`);
     }
 
-    const hasAudio = post.postType === "audio_embed" || (post.files || []).some((f) => f.kind === "audio" || /\.(mp3|wav|flac|m4a|aac|ogg)$/i.test(f.filename || f.url));
+    const hasAudio = post.postType === "audio_embed" || post.postType === "audio" || (post.files || []).some((f) => f.kind === "audio" || /\.(mp3|wav|flac|m4a|aac|ogg)$/i.test(f.filename || f.url));
     if (hasAudio) {
       badges.push(`<span class="badge audio-files" title="Enthält Audio">${ICON_AUDIO}Audio File(s)</span>`);
     }
 
-    const hasImages = post.postType === "image_file" || (post.files || []).some((f) => f.kind === "image" || /\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(f.filename || f.url));
+    const hasImages = post.postType === "image_file" || post.postType === "image" || (post.files || []).some((f) => f.kind === "image" || /\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(f.filename || f.url));
     if (hasImages) {
       badges.push(`<span class="badge image-files" title="Enthält Bilder">${ICON_IMAGE}Image File(s)</span>`);
     }
 
     const internalPostTypes = [
+      "image",
       "image_file",
+      "audio",
+      "audio_embed",
       "link",
       "video_external_file",
       "video_embed",
       "video",
-      "audio_embed",
       "text_only",
     ];
-    if (post.postType && !internalPostTypes.includes(post.postType)) {
+    if (post.postType && !internalPostTypes.includes(post.postType) && !hasAudio && !hasImages && !post.video) {
       badges.push(`<span class="badge">${escapeHtml(post.postType)}</span>`);
     }
 

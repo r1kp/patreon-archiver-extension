@@ -3283,7 +3283,7 @@ async function downloadEmbedViaYtDlp(post, isRetry = false) {
   state.lastTotalCount = 1;
   state.lastPostTitle = post.title ? `${post.title} · Video` : "Downloading video...";
 
-  const feedProgress = createVideoProgressTracker(isAudioOnly);
+  const feedProgress = createVideoProgressTracker(isAudioOnly, post.title);
   let mergeTickInterval = null;
 
   function applyProgress(line) {

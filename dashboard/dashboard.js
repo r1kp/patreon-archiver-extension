@@ -3279,9 +3279,9 @@ async function downloadEmbedViaYtDlp(post, isRetry = false) {
   activeCancelSignal = getItemSignal({ postId: post.id, url: post.video.url, kind: "embed" });
   activeCancelSignal.cancelled = false;
 
-  state.lastDoneCount = 1;
+  state.lastDoneCount = 0;
   state.lastTotalCount = 1;
-  state.lastPostTitle = "Downloading video...";
+  state.lastPostTitle = post.title ? `${post.title} · Video` : "Downloading video...";
 
   const feedProgress = createVideoProgressTracker(isAudioOnly);
   let mergeTickInterval = null;
@@ -3300,34 +3300,19 @@ async function downloadEmbedViaYtDlp(post, isRetry = false) {
     } else {
       el("progressFileLabel").textContent = speed ? `${phaseLabel} · ${speed}` : phaseLabel;
       state.targetFilePct = pct;
-      // Math.max statt harter Zuweisung: waehrend der Merge-Phase tickt ein
-      // 500ms-Intervall weiter, das auch NACH dem eigentlichen Abschluss noch
-      // feuern kann. Eine direkte Zuweisung hat targetOverallPct dann von 100
-      // wieder auf ~97 zurueckgesetzt - finishProgressSuccessfully() wartete
-      // anschliessend vergeblich darauf, dass visualOverallPct 99.5 erreicht,
-      // und lief jedes Mal in sein Sicherheitsnetz-Timeout. Genau das Symptom
-      // "Balken erreicht am Ende nie 100%".
       state.targetOverallPct = Math.max(state.targetOverallPct || 0, pct);
-      // Wenn yt-dlp eine Groesse fuer den aktuellen Stream meldet, echte
-      // Byte-Werte statt reiner Prozentzahl zeigen (MB/GB-Anzeige + bessere
-      // Est.-Time-Berechnung, da calculateSmoothEta() auf Byte-Werten basiert).
       const rowPatch = { status: "active", postId: post.id };
       if (totalBytes > 0) {
-        rowPatch.received = Math.round((pct / 100) * totalBytes);
+        const doneBytes = Math.round((pct / 100) * totalBytes);
+        rowPatch.received = doneBytes;
         rowPatch.total = totalBytes;
         rowPatch.itemWeight = totalBytes;
+        setRowProgress(embedKey, rowPatch);
+        setAggregateBytes(doneBytes, totalBytes, { updateTarget: false });
       } else {
         rowPatch.pct = pct;
+        setRowProgress(embedKey, rowPatch);
       }
-      setRowProgress(embedKey, rowPatch);
-      // Groesse/ETA der Ecke auch fuer den Einzel-Video-Button fuellen - genau
-      // ueber denselben Weg wie der Bulk-Pfad (setAggregateBytes), nicht ueber
-      // eine zweite eigene Rechnung. updateTarget:false, weil die Prozentzahl
-      // hier bewusst aus yt-dlps phasenskaliertem pct kommt (0-80 Video, 80-95
-      // Audio, 95-99 Merge, siehe videoProgress.js) - die reine Byte-Rechnung
-      // kennt die Merge-Phase nicht und wuerde am Ende gegen die zwei
-      // Zielwerte arbeiten.
-      if (totalBytes > 0) setAggregateBytes(0, totalBytes, { updateTarget: false });
     }
   }
 

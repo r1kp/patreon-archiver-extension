@@ -1,4 +1,4 @@
-﻿# Privacy Policy for Patreon Archiver
+# Privacy Policy for Patreon Archiver
 
 Last updated: August 21, 2026
 
@@ -32,5 +32,6 @@ The Extension does not use any third-party tracking, advertising, or data broker
 
 ## Contact
 
-If you have questions about this Privacy Policy, you can open an issue on the official GitHub repository:
-https://github.com/r1kp/patreon-archiver-extension
+If you have questions or inquiries regarding this Privacy Policy, you can reach out via email or open an issue on GitHub:
+* Email: r1kp.dev@gmail.com
+* GitHub: https://github.com/r1kp/patreon-archiver-extension
